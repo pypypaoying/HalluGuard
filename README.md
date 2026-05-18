@@ -1,5 +1,7 @@
 # HalluGuard
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 HalluGuard is a lightweight test-time correction layer for time-series forecasts. It is designed for cases where a forecasting model produces predictions that look plausible but violate local dynamics, such as boundary jumps, trend changes, or unsupported high-frequency behavior.
 
 The current version is a research prototype. It does not retrain the forecasting model. Instead, it takes the model forecast and recent context, estimates whether the forecast is dynamically suspicious, and applies a small correction only when validation-calibrated rules say the correction is likely to help.
