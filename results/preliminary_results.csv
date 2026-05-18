@@ -1,0 +1,8 @@
+method,role,clean_mean_mse_delta_pct,clean_dlinear_mse_delta_pct,clean_patchtst_mse_delta_pct,clean_beats_random_action,clean_paired_win_rate,clean_beats_matched_smoothing,dominant_action_rate_max,stress_mean_mse_delta_pct,boundary_stress_mse_delta_pct,high_frequency_stress_mse_delta_pct,external_mean_mse_delta_pct,external_dlinear_mse_delta_pct,external_patchtst_mse_delta_pct,external_patchtst_harmed_configs,test_threshold_leakage,status
+Adaptive router baseline,previous baseline,-1.289319,-2.281087,-0.297552,15/16,0.95,12/16,0.8789,-1.390795,-1.482901,-1.282335,-0.930070,-1.864570,0.004431,4/8,false,baseline
+Capped logistic router,learned-router diagnostic,-1.657706,-2.832699,-0.482713,15/16,0.90,15/16,0.8887,-1.920196,-1.817744,-2.422435,-1.154303,-2.173467,-0.135139,3/8,false,diagnostic
+Boundary-selective adaptive router,best completed clean-stress result,-2.163965,-3.774653,-0.553277,15/16,0.9125,15/16,0.6992,-2.487840,-2.501779,-2.890815,-1.310251,-2.574738,-0.045764,2/8,false,completed
+Stable selective router,external-harm diagnostic,-2.017741,-3.603920,-0.431562,15/16,0.9375,14/16,0.9609,NA,NA,NA,-1.454567,-2.607456,-0.301679,0/8,false,diagnostic
+Stable selective fallback router,external-harm reduction candidate,-2.157969,-3.736522,-0.579417,15/16,0.8875,16/16,0.6992,-2.468476,-2.457904,-2.881110,-1.565944,-2.763450,-0.368439,0/8,false,diagnostic
+Spectral-support guard,frequency-support diagnostic,-2.186662,-3.777646,-0.595678,13/16,0.8375,16/16,0.6992,NA,NA,NA,-1.446617,-2.753258,-0.139976,3/8,false,archived diagnostic
+Smoothing-cap selective router,clean-table leader,-2.193442,-3.770138,-0.616746,16/16,0.9375,16/16,0.6992,pending,pending,pending,pending,pending,pending,pending,false,pending stress and external evaluation
