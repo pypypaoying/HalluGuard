@@ -53,13 +53,15 @@ The early evidence suggests that HalluGuard is useful as a post-processing modul
 
 External generalization is not yet a settled claim. The current external fixture is useful for detecting harm, especially on PatchTST-like forecasts. A stable-forecast guard can remove the observed PatchTST harm in this fixture, but it trades off some clean/stress performance, so larger and more diverse external benchmarks are still needed.
 
-## Next Steps
+## Future Work and Expected Outcomes
 
-- Freeze the current clean/stress leader as the main research snapshot.
-- Expand evaluation to more datasets, models, and horizons.
-- Package the correction module behind a simple API that can accept forecasts from external frameworks.
-- Add reproducible scripts for benchmark generation, correction, and result aggregation.
-- Study complementary routing modules for cases where correction may harm already stable forecasts, especially external PatchTST-like cases.
+- Freeze the current clean/stress leader as the main research snapshot and separate it from safety-oriented diagnostic variants.
+- Expand external evaluation to more datasets, forecasting backbones, and horizons, with a focus on identifying where HalluGuard should correct and where it should abstain.
+- Package the correction module behind a simple API that accepts exported forecast tables and returns corrected forecasts, selected actions, confidence scores, and diagnostics.
+- Add reproducible scripts for benchmark generation, correction, result aggregation, and action-level case studies.
+- Study safety-aware routing for already stable forecasts, especially PatchTST-like external cases where aggressive smoothing may harm.
+
+The expected project outcome is a lightweight, model-agnostic forecast correction package that can sit behind existing time-series forecasters without retraining them. The package should expose both a performance-oriented mode for clean/stress gains and a conservative mode for low-harm deployment on unfamiliar external forecast tables.
 
 ## Repository Status
 
