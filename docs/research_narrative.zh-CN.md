@@ -70,7 +70,7 @@ Router 的输入特征全部是 target-free 的 forecast/context 特征，包括
 
 ### 3.1 Base HalluGuard: trend-frequency scoring and correction
 
-第一阶段把 forecast-level risk 写成趋势偏移和频率偏移。设 $\beta(z)$ 表示序列 $z$ 的 OLS slope，$\mathcal{F}(z)_k$ 表示离散傅里叶系数，$k_c$ 是高频 cutoff。趋势风险为
+第一阶段把 forecast-level risk 写成趋势偏移和频率偏移。设 $\beta(z)$ 表示序列 $z$ 的 OLS slope，$\mathcal{F(z)}_k$ 表示离散傅里叶系数，$k_c$ 是高频 cutoff。趋势风险为
 
 $$
 s_{\mathrm{trend}}(\hat y, x)=\frac{H\cdot |\beta(\hat y)-\beta(x)|}{\sigma_x}.
