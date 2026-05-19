@@ -40,26 +40,26 @@ The main metric is MSE delta percentage against the uncorrected forecast. Negati
 | Method | Role | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | Notes |
 |---|---|---:|---:|---:|---:|---|
 | Adaptive router baseline | Previous baseline | -1.289% | -0.298% | -1.391% | +0.004% | Strong internal baseline, weak PatchTST external harm profile |
-| Capped logistic router | Learned-router diagnostic | -1.658% | -0.483% | -1.920% | -0.135% | Improved clean/stress, but external action concentration remains weak |
 | Boundary-selective adaptive router | Best completed clean/stress result | -2.164% | -0.553% | -2.488% | -0.046% | Strongest fully completed clean/stress candidate |
-| Stable selective fallback router | External-harm diagnostic | -2.158% | -0.579% | -2.468% | -0.368% | Best current PatchTST harm reduction on the external fixture |
-| Smoothing-cap selective router | Clean-table leader | -2.193% | -0.617% | pending | pending | Best clean benchmark result so far; stress/external evaluation is still being completed |
+| Smoothing-cap selective router | Clean/stress leader | -2.193% | -0.617% | -2.509% | -0.065% | Best clean and stress result so far, but external PatchTST harm is only partially improved |
+| Stable smoothing-cap guard | External-harm guard | -2.135% | -0.571% | -2.463% | -0.366% | Best PatchTST harm reduction on the external fixture, with 0/8 harmed PatchTST configurations |
+| Conditional stable-cap guard | Compromise candidate | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains while improving external behavior, but does not fully remove PatchTST harm |
 
 See [preliminary results](docs/preliminary_results.md) and [CSV table](results/preliminary_results.csv) for the current snapshot.
 
 ## Current Takeaway
 
-The early evidence suggests that HalluGuard is useful as a post-processing module for time-series forecasts, especially under clean and stress-test settings. The most promising mechanism is not full-horizon smoothing, but local boundary repair plus selective residual smoothing with validation-only routing.
+The early evidence suggests that HalluGuard is useful as a post-processing module for time-series forecasts, especially under clean and stress-test settings. The most promising mechanism is not full-horizon smoothing, but local boundary repair plus selective residual smoothing with validation-only routing and confidence-capped smoothing deployment.
 
-External generalization is not yet a settled claim. The current external fixture is useful for detecting harm, especially on PatchTST-like forecasts, but larger and more diverse external benchmarks are still needed.
+External generalization is not yet a settled claim. The current external fixture is useful for detecting harm, especially on PatchTST-like forecasts. A stable-forecast guard can remove the observed PatchTST harm in this fixture, but it trades off some clean/stress performance, so larger and more diverse external benchmarks are still needed.
 
 ## Next Steps
 
-- Finish stress and external evaluation for the current clean-table leader.
+- Freeze the current clean/stress leader as the main research snapshot.
 - Expand evaluation to more datasets, models, and horizons.
 - Package the correction module behind a simple API that can accept forecasts from external frameworks.
 - Add reproducible scripts for benchmark generation, correction, and result aggregation.
-- Study complementary routing modules for cases where correction may harm already stable forecasts.
+- Study complementary routing modules for cases where correction may harm already stable forecasts, especially external PatchTST-like cases.
 
 ## Repository Status
 

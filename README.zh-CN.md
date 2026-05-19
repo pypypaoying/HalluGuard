@@ -35,26 +35,26 @@ HalluGuard 希望研究一个更通用的问题：是否可以在不改变原模
 | 方法 | 作用 | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | 说明 |
 |---|---|---:|---:|---:|---:|---|
 | Adaptive router baseline | 前一版基线 | -1.289% | -0.298% | -1.391% | +0.004% | 内部结果较稳，但 PatchTST 外部 harm 风险较高 |
-| Capped logistic router | 学习式路由诊断 | -1.658% | -0.483% | -1.920% | -0.135% | clean/stress 提升明显，但外部动作集中问题仍存在 |
 | Boundary-selective adaptive router | 已完整验证的 clean/stress 主结果 | -2.164% | -0.553% | -2.488% | -0.046% | 当前最可靠的 clean/stress 完整结果 |
-| Stable selective fallback router | 外部 harm 诊断 | -2.158% | -0.579% | -2.468% | -0.368% | 当前对 PatchTST 外部 harm 改善最明显的版本 |
-| Smoothing-cap selective router | clean benchmark 领先候选 | -2.193% | -0.617% | pending | pending | clean 表现目前最好，stress/external 仍需补完 |
+| Smoothing-cap selective router | clean/stress 主结果 | -2.193% | -0.617% | -2.509% | -0.065% | 当前 clean 和 stress 表现最好，但外部 PatchTST harm 只得到部分改善 |
+| Stable smoothing-cap guard | 外部 harm 保护版本 | -2.135% | -0.571% | -2.463% | -0.366% | 当前 external fixture 上 PatchTST harm 改善最明显，PatchTST harmed 配置为 0/8 |
+| Conditional stable-cap guard | 折中候选 | -2.181% | -0.609% | -2.505% | -0.171% | 基本保留 clean/stress 收益，同时改善外部表现，但没有完全消除 PatchTST harm |
 
 更完整的结果见 [preliminary results](docs/preliminary_results.md) 和 [CSV result table](results/preliminary_results.csv)。
 
 ## 当前结论
 
-初步结果表明，HalluGuard 作为时间序列预测后处理模块具有可行性，尤其是在 clean benchmark 和 stress benchmark 上能稳定降低误差。当前较有价值的机制并不是全局平滑，而是局部边界修复、选择性残差平滑和验证集校准路由的组合。
+初步结果表明，HalluGuard 作为时间序列预测后处理模块具有可行性，尤其是在 clean benchmark 和 stress benchmark 上能稳定降低误差。当前较有价值的机制并不是全局平滑，而是局部边界修复、选择性残差平滑、验证集校准路由和置信度约束平滑部署的组合。
 
-外部泛化仍然需要谨慎表述。目前的 external fixture 更适合作为 harm diagnostic，用来检查某些修正策略是否会伤害 PatchTST 等模型；它还不足以支撑广泛外部泛化的结论。
+外部泛化仍然需要谨慎表述。目前的 external fixture 更适合作为 harm diagnostic，用来检查某些修正策略是否会伤害 PatchTST 等模型。稳定预测保护模块可以在该 fixture 上消除观察到的 PatchTST harm，但会牺牲一部分 clean/stress 收益，因此还需要更大规模、更真实的外部评估。
 
 ## 后续工作
 
-- 补完当前 clean benchmark 领先候选的 stress 和 external 评估。
+- 固化当前 clean/stress 主结果，作为阶段性研究快照。
 - 扩展到更多数据集、模型和预测长度。
 - 将修正模块整理成可接收外部预测结果的简单 API。
 - 增加可复现实验脚本，包括 benchmark 生成、预测修正和结果汇总。
-- 继续研究更稳健的路由模块，减少对已经稳定预测的误修正。
+- 继续研究更稳健的路由模块，减少对已经稳定预测的误修正，尤其关注外部 PatchTST 类场景。
 
 ## 仓库状态
 
