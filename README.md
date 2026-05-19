@@ -45,7 +45,7 @@ The main metric is MSE delta percentage against the uncorrected forecast. Negati
 | Stable smoothing-cap guard | External-harm guard | -2.135% | -0.571% | -2.463% | -0.366% | Best PatchTST harm reduction on the external fixture, with 0/8 harmed PatchTST configurations |
 | Conditional stable-cap guard | Compromise candidate | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains while improving external behavior, but does not fully remove PatchTST harm |
 
-See [preliminary results](docs/preliminary_results.md) and [CSV table](results/preliminary_results.csv) for the current snapshot.
+See [preliminary results](docs/preliminary_results.md), [research narrative and architecture notes](docs/research_narrative.zh-CN.md), and [CSV table](results/preliminary_results.csv) for the current snapshot.
 
 ## Current Takeaway
 

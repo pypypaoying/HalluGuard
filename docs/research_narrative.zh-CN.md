@@ -1,0 +1,232 @@
+# HalluGuard Research Narrative
+
+本文档从研究动机、文献 gap、方法演进、实验结果和关键代码实现几个角度，梳理 HalluGuard 当前原型的研究路线。文中结果来自本地原型实验，适合作为阶段性项目说明，不应被解读为已经完成的大规模外部泛化结论。
+
+## 1. Motivation and Literature Gap
+
+长期时间序列预测已经有大量强模型和强 baseline：PatchTST 通过 patching 和 channel-independence 改善 Transformer 在长序列预测上的表现；DLinear 说明很多标准 LTSF benchmark 上简单线性分解模型仍然非常强，提醒后续方法必须和强 baseline 对照；Autoformer 和 FEDformer 分别从趋势/季节分解、频域增强角度建模长期依赖；RevIN 和 Non-stationary Transformers 关注分布漂移、非平稳性和归一化/去平稳化问题；TENT 代表了一类 test-time adaptation 方法，但通常需要访问模型参数和梯度。
+
+这些工作留下了一个很实际的空隙：当一个已经训练好的预测模型输出了 forecast 之后，如果这个输出在平均误差上看起来还可以，但局部动态不可信，例如边界跳变、斜率衔接错误、曲率变化不合理，或者出现近期上下文不支持的高频波动，现有方法通常不会提供一个轻量、模型无关、无需重训的输出层 guard。
+
+HalluGuard 的出发点就是这个 gap：不替代 DLinear、PatchTST 或其他 forecasting backbone，也不做模型内部参数更新，而是在 test time 接收 recent context 和 raw forecast，判断 forecast 是否出现局部动态风险，并在验证集校准过的条件下做小幅 correction。这个想法最初来自三条线索：
+
+- 时间序列分解和频域建模文献说明，趋势和频率结构对预测质量很关键。
+- 分布漂移和 test-time adaptation 文献说明，test-time 的输入/输出环境确实可能需要额外校正。
+- 强 baseline 文献提醒，如果 correction 只是变成 naive smoothing，就没有足够机制价值，所以必须持续和 random trigger、matched smoothing 等控制组比较。
+
+参考论文：
+
+- PatchTST: [A Time Series is Worth 64 Words: Long-term Forecasting with Transformers](https://arxiv.org/abs/2211.14730)
+- DLinear: [Are Transformers Effective for Time Series Forecasting?](https://arxiv.org/abs/2205.13504)
+- Autoformer: [Decomposition Transformers with Auto-Correlation for Long-Term Series Forecasting](https://arxiv.org/abs/2106.13008)
+- FEDformer: [Frequency Enhanced Decomposed Transformer for Long-term Series Forecasting](https://arxiv.org/abs/2201.12740)
+- RevIN: [Reversible Instance Normalization for Accurate Time-Series Forecasting against Distribution Shift](https://openreview.net/forum?id=cGDAkQo1C0p)
+- Non-stationary Transformers: [Exploring the Stationarity in Time Series Forecasting](https://arxiv.org/abs/2205.14415)
+- TENT: [Fully Test-Time Adaptation by Entropy Minimization](https://arxiv.org/abs/2006.10726)
+
+## 2. Research Path
+
+### 2.1 First module: trend-frequency correction
+
+最早的 HalluGuard 版本把 forecast 的异常理解为两类：趋势异常和频率异常。实现上，它比较 context 与 prediction 的 slope、高频能量占比、谱距离和 roughness，然后用验证集分位数阈值触发 trend correction 或 frequency correction。
+
+这一版验证了一个基本事实：forecast 后处理确实可以在部分配置上降低误差，而且可以做到不接触模型内部参数。但完整 clean table 也暴露出问题：趋势/频率 trigger 和随机 trigger 的差距不稳定，naive smoothing 在纯 MSE 上经常更强。这说明原始 idea 有价值，但“趋势/频率 hallucination”不是最稳的机制表达。
+
+### 2.2 Dynamics version: boundary and local continuity
+
+后续实验把问题从“趋势/频率异常”收窄为“forecast 边界和局部动态连续性异常”。新的 HalluGuard-Dynamics 不再主要依赖全局频谱，而是看三个更局部的量：
+
+- forecast 第一个点相对 context last point + last diff 的 boundary jump；
+- forecast 起始一阶差分相对 context 末端差分的 gap；
+- forecast 起始曲率相对 context 尾部曲率的 gap。
+
+修正向量也从全局滤波变成局部衰减式修复：边界修正最强，沿 horizon 指数衰减；一阶差分和曲率修复用更平滑的 horizon 权重。这样做的机制更清楚：它不是泛化地“把预测变平滑”，而是优先修复预测起点附近和历史上下文衔接失败的问题。
+
+这一线取得了第一个稳定结果：clean full table 上 HalluGuard-Dynamics 达到约 `-0.623%` MSE delta，15/16 配置改善，beats random 15/16，paired win 0.9375；stress suite 中 boundary discontinuity 明确受益。这说明模块本身确实有用，但仍然不能宣称它优于所有 smoothing baseline，因为在纯点误差目标上 naive/EMA/median smoothing 仍有优势。
+
+### 2.3 Router version: from one correction to action selection
+
+单一 correction 的局限是，不同 forecast 错误需要不同动作。有些样本需要 no correction，有些需要 boundary repair，有些需要 smoothing，但直接全局 smoothing 又可能抹掉真实转折。因此下一步加入 validation-only router，把 HalluGuard-Dynamics 变成一个 action selection module。
+
+Router 的输入特征全部是 target-free 的 forecast/context 特征，包括 boundary score、first-diff score、curvature score、high-frequency excess、spectral distance、prediction/context variance ratio、diff std ratio、context volatility 和 horizon。训练时只在 validation split 上比较各 action 的真实误差，给每个样本打上 best safe action label；测试时只用特征做路由，不看 test target。
+
+第一版 adaptive router 的 clean mean MSE delta 从 `-0.623%` 推到 `-1.289%`，stress mean 到 `-1.391%`，并且 beats random action 15/16。这证明 router 不是只在做固定 smoothing，而是能利用局部特征选择更合适的修正动作。
+
+### 2.4 Mechanism search: selective repair and smoothing cap
+
+自动迭代阶段的核心任务不是盲目调参，而是围绕失败模式设计新机制。关键发现有三类：
+
+- 纯 signal-preserve 或直接减少 smoothing action 会削弱 clean/stress 效果，说明 smoothing 类动作仍有价值。
+- 直接使用 raw smoothing 会带来 external PatchTST harm 风险，说明 smoothing 必须被限制。
+- `boundary_then_selective_median` 是一个有效新动作：先做 boundary repair，再只对 context 不支持的 residual spike 做局部 median damping。
+
+最终最强 clean/stress 主机制是 smoothing-cap selective router：先用 margin-abstain router 做 action selection；如果 router 选择了 raw smoothing 但置信 margin 不够，就 fallback 到 `boundary_then_selective_median`。这保留 smoothing 的收益，同时减少低置信 smoothing 的过度修正。
+
+同时，stable smoothing-cap guard 能进一步降低 external PatchTST harm：当 prediction 已经很稳定、diff std ratio 低时，对 raw smoothing 触发 stable veto，并 fallback 到 selective repair。它在 external fixture 上把 PatchTST harmed configs 从 4/8 降到 0/8，但 clean/stress 稍弱，所以当前更适合作为 harm-diagnostic variant，而不是主 clean/stress snapshot。
+
+## 3. Base HalluGuard Architecture
+
+```mermaid
+flowchart LR
+  A[Context Window] --> B[Forecast Model]
+  B --> C[Raw Forecast]
+  A --> D[Trend Frequency Scorer]
+  C --> D
+  D --> E[Validation Calibrated Trigger]
+  E -->|Trend Risk| F[Trend Correction]
+  E -->|Frequency Risk| G[Frequency Attenuation]
+  C -->|No Trigger| H[Output Forecast]
+  F --> H
+  G --> H
+  D --> I[Diagnostics]
+```
+
+## 4. Router-Added Architecture
+
+```mermaid
+flowchart LR
+  A[Context Window] --> B[Base Forecast]
+  B --> C[Candidate Actions]
+  C --> C1[No Correction]
+  C --> C2[Boundary Repair]
+  C --> C3[Dynamics Repair]
+  C --> C4[Smoothing Actions]
+  A --> D[Target-Free Features]
+  B --> D
+  D --> E[Validation-Trained Router]
+  E --> F[Selected Action]
+  C1 --> G[Action Executor]
+  C2 --> G
+  C3 --> G
+  C4 --> G
+  F --> G
+  G --> H[Final Forecast]
+  E --> I[Controls]
+  I --> I1[Random Action]
+  I --> I2[Matched Smoothing]
+  I --> I3[Shuffled Features]
+```
+
+## 5. Final Mechanism Architecture
+
+```mermaid
+flowchart LR
+  A[Context Window] --> B[Raw Forecast]
+  A --> C[Feature Extractor]
+  B --> C
+  C --> D[Margin-Abstain Router]
+  D --> E{Selected Action}
+  E -->|No Correction| J[Final Forecast]
+  E -->|Boundary or Dynamics| F[Boundary Repair]
+  E -->|Raw Smoothing| G{Smoothing Margin Cap}
+  G -->|High Confidence| H[Median EMA Naive Smoothing]
+  G -->|Low Confidence| I[Boundary plus Selective Median]
+  H --> K{Stable Guard}
+  K -->|Stable Low-Noise| I
+  K -->|Otherwise| J
+  F --> J
+  I --> J
+```
+
+## 6. Experiment Summary
+
+所有主表都使用 MSE delta percentage，相对 uncorrected forecast，负数越好。clean benchmark 覆盖 DLinear 和 PatchTST 的多 horizon 配置；stress benchmark 覆盖 boundary discontinuity、trend drift、slope break、delayed level shift、high-frequency perturbation 和 variance shift；external fixture 目前只作为 harm diagnostic，不作为泛化结论。
+
+| Method | Role | Clean MSE | Clean PatchTST | Stress MSE | External PatchTST | Key Evidence |
+|---|---|---:|---:|---:|---:|---|
+| Trend-frequency correction | First module | -0.058% | not selected | -0.104% stress probe | not selected | Improved 15/16 but random separation was weak |
+| HalluGuard-Dynamics | First stable mechanism | -0.623% | not selected | boundary stress -0.932% | external callable | Local dynamics repair passed random controls but did not beat smoothing on pure MSE |
+| Adaptive router baseline | First router parent | -1.289% | -0.298% | -1.391% | +0.004% | Clean beats random 15/16; stress improves, but external PatchTST harm remains |
+| Boundary-selective adaptive router | Strong selective action | -2.164% | -0.553% | -2.488% | -0.046% | Boundary plus selective median improves clean/stress substantially |
+| Smoothing-cap selective router | Main clean/stress snapshot | -2.193% | -0.617% | -2.509% | -0.065% | Best clean/stress result; clean beats random 16/16 and matched smoothing 16/16 |
+| Stable smoothing-cap guard | Harm diagnostic variant | -2.135% | -0.571% | -2.463% | -0.366% | External PatchTST harmed configs reduced to 0/8, with clean/stress tradeoff |
+| Conditional stable-cap guard | Compromise diagnostic | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains, improves external behavior, but does not remove all PatchTST harm |
+
+当前最稳的结论是：HalluGuard 已经从一个 trend/frequency post-processing idea，演进成一个 boundary-aware repair + selective residual smoothing + validation-only router 的 test-time correction family。它在 clean 和 stress 表上有稳定收益，尤其显著改善了 PatchTST clean delta；stable guard 也显示可以缓解 external PatchTST harm，但外部泛化仍需要更大数据集验证。
+
+## 7. Key Code Locations
+
+下面路径指向当前本地研究工作区，公开仓库后续整理代码时可以按这些模块迁移。
+
+### 7.1 Initial trend-frequency HalluGuard
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\correction.py`
+
+- `score_sample`：计算 context 与 prediction 的 slope gap、high-frequency energy ratio、spectral distance、roughness excess，并输出 trend/frequency risk score。
+- `calibrate_thresholds`：只用 validation samples 的 score 分位数拟合阈值，避免 test threshold leakage。
+- `trend_correction`：根据 prediction slope 与 context slope 的差异构造 centered linear adjustment，并用 `max_adjustment_ratio` 限制单次修正幅度。
+- `frequency_correction`：对 prediction 做 rFFT，衰减 cutoff 以上的高频系数，再 inverse FFT 回时域。
+- `apply_correction`：把 score、trigger、trend/frequency correction、turning point guard 和 baseline variants 组合成统一接口。
+
+这部分代码对应最早的模块验证。它证明 post-processing 可以带来收益，但完整表明 trend/frequency trigger 的机制区分度不够，因此后续转向 local dynamics。
+
+### 7.2 HalluGuard-Dynamics
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\halluguard_dynamics.py`
+
+- `dynamics_signed_terms`：定义核心局部动态误差。`boundary_jump` 比较 `pred[0]` 和 `ctx[-1] + last_diff`；`first_diff_gap` 比较 forecast 起始斜率和 context 末端斜率；`curvature_gap` 比较 context tail 与 prediction head 的二阶差分均值。
+- `score_sample`：把 boundary、first_diff、curvature 按权重组合为 dynamics score。
+- `correction_vector`：根据 signed terms 生成修正向量。boundary component 用指数衰减，first_diff 和 curvature component 加入 horizon 权重，并支持 max adjustment cap。
+- `fit_policy`：在 validation split 上搜索 trigger quantile 和 correction strength。objective 不只最小化 validation MSE，还加入 random separation、matched smoothing advantage 和 trigger rate penalty。
+- `apply_correction` / `evaluate_table`：冻结 validation policy，在 test samples 上执行 correction 和汇总指标。
+
+这部分是 HalluGuard 从概念走向可复用模块的关键。它把“预测幻觉”从宽泛的频率异常，具体化成可解释的 boundary/local-continuity failure。
+
+### 7.3 Router and action execution
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\halluguard_router.py`
+
+- `extract_router_features`：从 context 和 forecast 提取 target-free features，包括 boundary/first-diff/curvature score、high-frequency excess、spectral distance、variance ratio、diff std ratio、context volatility 和 horizon。
+- `prepare_router_training`：在 validation split 上预计算每个 candidate action 的输出与 error matrix，再用 `label_best_safe_actions` 生成 validation-only action labels。
+- `fit_router_from_prepared`：统一管理 rule router、logistic router、margin-abstain router、smoothing-cap router、stable guard 等不同 router family。
+- `apply_action`：执行具体动作，包括 `no_correction`、`boundary_only`、`dynamics_full`、`median_smoothing`、`ema_smoothing`、`naive_smoothing`、`boundary_then_ema`、`boundary_then_median` 和 `boundary_then_selective_median`。
+- `selective_residual_median`：最终机制里的重要动作。它先计算 prediction 相对 median-smoothed prediction 的 residual，再用 context tail 的 residual quantile 作为阈值，只对超过 context-supported roughness 的 spike 做局部 damping，并把相邻点一并纳入 mask，避免单点突兀。
+
+Router 的核心是：训练时可以利用 validation target 评价 action 好坏；部署时只使用 target-free features 路由。控制组包括 random action router、matched smoothing control 和 shuffled-feature router，用来防止“看起来像机制，其实只是 smoothing 或随机选择”的问题。
+
+### 7.4 Final clean/stress mechanism and harm-guard variants
+
+同一文件 `halluguard_router.py` 中，最终几类机制集中在以下函数：
+
+- `fit_margin_abstain_router`：先训练 logistic action classifier，再用 validation-selected probability margin threshold 做低置信 abstention，低置信 active action 会退回 `no_correction`。
+- `fit_smoothing_cap_selective_router`：当前 clean/stress 主机制。它继承 margin-abstain router，如果 router 选择 raw smoothing action 但 smoothing confidence margin 不够，就 fallback 到 `boundary_then_selective_median`。
+- `fit_stable_smoothing_cap_router`：external-harm diagnostic variant。在 smoothing-cap 之后加入 stable-forecast veto，如果 `pred_context_diff_std_ratio` 低，说明 forecast 已经较稳定，则 raw smoothing 改为 selective fallback。
+- `fit_conditional_stable_cap_router`：折中 variant。只有当 forecast 稳定且 unsupported-noise score 也低时才触发 stable veto，试图保留 clean/stress 的同时改善 external harm。
+- `predict_action_from_model`：所有 router family 的 runtime dispatch 都在这里完成。最终机制的 test-time 行为也在这里固定：margin abstention、smoothing margin cap、stable guard、conditional stable guard 都通过 target-free features 和 validation-fitted thresholds 决定。
+
+### 7.5 Evaluation and automated search runner
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\run_stage13_adaptive_router.py`
+
+- `evaluate_router_ablation_set`：主 evaluation contract。它在同一批样本上评估 candidate actions、main router、validation best single action、matched smoothing、random trigger、random action router 和 shuffled-feature router。
+- `random_action_outputs` / `paired_random_action_rows`：检查 main router 是否只是随机 action distribution 的幸运结果。
+- `sparse_smoothing_outputs`：构造 matched smoothing control，检查 HalluGuard 是否只是 sparse smoothing。
+- `action_alignment_rows`：记录 action 与样本动态特征之间的对应关系。
+- `write_outputs`：输出 `combined_metrics.csv`、`variant_summary.csv`、diagnostics 等结果文件。
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\run_stage14_autosearch.py`
+
+- 这是后续自动迭代的 runner。它把候选机制分为 smoke、clean full、stress、external batch 几类 scope，持续把新机制写入结果目录和 candidate ledger。
+- 虽然文件名仍带内部实验编号，但外部理解上可以把它看作 HalluGuard router/autosearch 的统一评估入口。
+
+配置文件：
+
+`D:\codex\HalluGuard Trend-Frequency Test-Time Correction\experiments\halluguard\configs\halluguard_stage14_autosearch.yaml`
+
+- `candidate_actions` 定义 router 可选动作集合。
+- `router.feature_names` 定义 target-free routing features。
+- `margin_abstain_*`、`smoothing_cap_*`、`stable_guard_*`、`conditional_stable_*` 定义不同机制的 validation search space 和惩罚项。
+
+## 8. Claim Boundary and Next Work
+
+当前可以说：HalluGuard 是一个模型无关的 test-time correction layer，已在本地 clean/stress 表上表现出稳定收益；最佳机制不是纯 smoothing，而是 boundary-aware repair、selective residual smoothing 和 validation-calibrated routing 的组合。
+
+当前不应说：它已经在大规模外部 benchmark 上泛化，或者它总是优于 smoothing baseline。external fixture 现在主要是 harm diagnostic，尤其用于发现和缓解 PatchTST-like forecasts 上的过修正风险。
+
+下一步建议：
+
+- 把当前 clean/stress 主机制冻结为 public research snapshot。
+- 把 runner 改成更干净的 external API：输入 forecast table，输出 corrected forecast、action、diagnostics。
+- 扩大 external benchmark，覆盖更多数据集、模型和 horizon。
+- 保留 stable smoothing-cap guard 作为 safety variant，并在更大外部表上判断是否值得合并进主机制。
+- 补充 action-level case study，展示哪些样本被 no correction、boundary repair、selective smoothing 或 raw smoothing 处理。

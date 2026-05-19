@@ -2,60 +2,66 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-HalluGuard 是一个面向时间序列预测的轻量级测试时修正模块。它关注的问题是：预测模型的输出在整体指标上可能不错，但在局部动态上仍然会出现不合理现象，例如突变边界被过度平滑、趋势变化没有跟上，或者生成了近期上下文并不支持的高频波动。
+HalluGuard 是一个面向时间序列预测的轻量级测试时修正模块。它关注的不是重新训练预测模型，而是在模型已经生成预测之后，检查预测曲线是否出现局部动态不一致，例如边界跳变、趋势衔接错误、过度平滑真实变化，或者生成近期上下文不支持的高频波动。
 
-当前版本是一个研究原型。它不重新训练基础预测模型，而是在模型已经生成预测之后，结合近期历史上下文和预测形态，判断预测是否存在局部动态风险，并在验证集校准的条件下执行小幅修正。
+当前版本是研究原型。它接收基础模型的 forecast 和 recent context，通过验证集校准过的规则或 router 判断是否需要修正，并只在预计有帮助时执行小幅 correction。
 
 ## 研究动机
 
-时间序列预测模型经常会遇到一种“看起来合理但局部不可信”的输出：曲线平滑、误差不一定极端，但在边界、趋势或频率结构上违背了序列本身的动态规律。
+现代时间序列预测模型在平均指标上可以很强，但仍可能产生“看起来合理、局部不可信”的预测输出。典型失败模式包括：
 
-HalluGuard 希望研究一个更通用的问题：是否可以在不改变原模型训练过程的前提下，通过一个模型无关的后处理模块，降低这类预测幻觉带来的误差和风险。
+- 突变或 level shift 被过度平滑；
+- forecast 起点和历史窗口末端衔接不自然；
+- 趋势、斜率或曲率变化没有跟上；
+- 生成上下文不支持的高频波动；
+- 对已经稳定的预测做过度修正。
 
-## 方法概览
+HalluGuard 研究的是：能否用一个模型无关的 post-processing layer，在不重训基础模型、不访问模型梯度的情况下，减少这些局部动态错误。
 
-当前最有希望的路线由三部分组成：
+## 当前方法
 
-- **边界感知修复**：针对预测起点附近的局部不连续和突变误差进行修正。
-- **选择性残差平滑**：只处理局部残差尖峰，而不是对整个预测区间做统一平滑。
-- **验证集校准路由**：根据验证集上的行为，在不修正、边界修复、平滑修正和选择性修复之间做选择，并用随机动作、匹配平滑和泄漏检查作为对照。
+目前最有价值的机制由三部分组成：
 
-这种设计的目标不是简单追求更强的平滑效果，而是避免退化成“所有情况都平滑”的后处理器。
+- **边界感知修复**：检测 forecast 起点与历史窗口末端之间的局部不连续。
+- **选择性残差平滑**：只平滑 context 不支持的局部 residual spike，而不是平滑整个预测 horizon。
+- **验证集校准路由**：在 no correction、boundary repair、smoothing、selective repair 等动作之间选择，并持续与 random-action、matched-smoothing 等控制组比较。
+
+这一设计的目标是保留 smoothing 对 MSE 的收益，同时避免退化成通用平滑器。
 
 ## 初步实验
 
-目前的实验基于 DLinear 和 PatchTST 等时间序列预测模型，在多个预测长度上进行评估。实验包括：
+当前实验使用 DLinear 和 PatchTST 的预测输出，覆盖多个 horizon。评估包括：
 
-- 标准 clean benchmark；
-- 面向边界突变、趋势漂移、斜率变化、延迟 level shift、高频扰动和方差变化的 stress benchmark；
-- 用于检查外部风险的 compact external fixture。
+- clean benchmark table；
+- boundary discontinuity、trend drift、slope break、delayed level shift、high-frequency perturbation、variance shift 等 stress tests；
+- compact external fixture，主要用于检查外部预测表上的 harm 风险。
 
-主要指标是相对于未修正预测的 MSE delta 百分比，数值越负表示修正后误差越低。
+主指标是相对 uncorrected forecast 的 MSE delta percentage。负数表示修正后 MSE 更低。
 
-| 方法 | 作用 | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | 说明 |
+| Method | Role | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | Notes |
 |---|---|---:|---:|---:|---:|---|
-| Adaptive router baseline | 前一版基线 | -1.289% | -0.298% | -1.391% | +0.004% | 内部结果较稳，但 PatchTST 外部 harm 风险较高 |
-| Boundary-selective adaptive router | 已完整验证的 clean/stress 主结果 | -2.164% | -0.553% | -2.488% | -0.046% | 当前最可靠的 clean/stress 完整结果 |
-| Smoothing-cap selective router | clean/stress 主结果 | -2.193% | -0.617% | -2.509% | -0.065% | 当前 clean 和 stress 表现最好，但外部 PatchTST harm 只得到部分改善 |
-| Stable smoothing-cap guard | 外部 harm 保护版本 | -2.135% | -0.571% | -2.463% | -0.366% | 当前 external fixture 上 PatchTST harm 改善最明显，PatchTST harmed 配置为 0/8 |
-| Conditional stable-cap guard | 折中候选 | -2.181% | -0.609% | -2.505% | -0.171% | 基本保留 clean/stress 收益，同时改善外部表现，但没有完全消除 PatchTST harm |
+| Adaptive router baseline | Previous baseline | -1.289% | -0.298% | -1.391% | +0.004% | Strong internal baseline, weak PatchTST external harm profile |
+| Boundary-selective adaptive router | Strong selective action | -2.164% | -0.553% | -2.488% | -0.046% | Boundary plus selective median substantially improves clean/stress |
+| Smoothing-cap selective router | Clean/stress leader | -2.193% | -0.617% | -2.509% | -0.065% | Best clean and stress result so far, but external PatchTST harm is only partially improved |
+| Stable smoothing-cap guard | External-harm guard | -2.135% | -0.571% | -2.463% | -0.366% | Best PatchTST harm reduction on the external fixture, with 0/8 harmed PatchTST configurations |
+| Conditional stable-cap guard | Compromise candidate | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains while improving external behavior, but does not fully remove PatchTST harm |
 
-更完整的结果见 [preliminary results](docs/preliminary_results.md) 和 [CSV result table](results/preliminary_results.csv)。
+更多结果见：[preliminary results](docs/preliminary_results.md)、[研究叙事与架构说明](docs/research_narrative.zh-CN.md) 和 [CSV result table](results/preliminary_results.csv)。
 
 ## 当前结论
 
-初步结果表明，HalluGuard 作为时间序列预测后处理模块具有可行性，尤其是在 clean benchmark 和 stress benchmark 上能稳定降低误差。当前较有价值的机制并不是全局平滑，而是局部边界修复、选择性残差平滑、验证集校准路由和置信度约束平滑部署的组合。
+初步证据显示，HalluGuard 作为时间序列 forecast 的测试时后处理模块是有价值的。最有前景的机制不是全局平滑，而是局部边界修复、选择性残差平滑，以及验证集校准的 router。
 
-外部泛化仍然需要谨慎表述。目前的 external fixture 更适合作为 harm diagnostic，用来检查某些修正策略是否会伤害 PatchTST 等模型。稳定预测保护模块可以在该 fixture 上消除观察到的 PatchTST harm，但会牺牲一部分 clean/stress 收益，因此还需要更大规模、更真实的外部评估。
+外部泛化还不是已经完成的结论。当前 external fixture 更适合作为 harm diagnostic，尤其用于观察 PatchTST-like forecasts 是否会被过度修正。stable-forecast guard 能在这个 fixture 中移除观察到的 PatchTST harm，但会牺牲一部分 clean/stress 表现，因此还需要更大规模的外部 benchmark。
 
-## 后续工作
+## 下一步工作
 
-- 固化当前 clean/stress 主结果，作为阶段性研究快照。
-- 扩展到更多数据集、模型和预测长度。
-- 将修正模块整理成可接收外部预测结果的简单 API。
-- 增加可复现实验脚本，包括 benchmark 生成、预测修正和结果汇总。
-- 继续研究更稳健的路由模块，减少对已经稳定预测的误修正，尤其关注外部 PatchTST 类场景。
+- 冻结当前 clean/stress leader 作为公开研究快照。
+- 扩展到更多数据集、模型和 horizon。
+- 将 correction module 包装成更清晰的 API，支持接入外部框架导出的 forecast table。
+- 增加可复现实验脚本，用于 benchmark generation、correction 和 result aggregation。
+- 继续研究 harm-aware routing，尤其是对已经稳定的 forecast 避免过度修正。
 
 ## 仓库状态
 
-本仓库目前保存的是 HalluGuard 的初步公开快照，包括项目动机、方法简介和阶段性实验结果。代码、API 和复现实验脚本会随着原型稳定逐步整理进来。
+本仓库目前存放初步公开研究说明、阶段性结果表和方法文档。代码与复现实验脚本会在原型进一步稳定后继续整理进来。
