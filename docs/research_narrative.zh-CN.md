@@ -66,6 +66,10 @@ Router 的输入特征全部是 target-free 的 forecast/context 特征，包括
 
 ## 3. Mechanism Formulas
 
+下图给出 HalluGuard 关注的四类局部预测异常形态：boundary jump、slope mismatch、curvature anomaly，以及 unsupported high-frequency oscillation。
+
+![Time-Series Failure Modes](figures/time_series_failure_modes.png)
+
 下面公式对应三张架构图中的三个阶段。记 recent context 为 $x_{1:L}$，raw forecast 为 $\hat y_{1:H}$，target 为 $y_{1:H}$，context scale 为 $\sigma_x=\mathrm{std}(x_{1:L})+\epsilon$。所有阈值只从 validation split 估计，test split 只用于最终评价。
 
 ### 3.1 Base HalluGuard: trend-frequency scoring and correction
@@ -119,10 +123,7 @@ $$
 
 $$
 \tilde Y_k=
-\begin{cases}
-(1-\lambda_{\mathrm{freq}})\hat Y_k, & k\ge k_c,\\
-\hat Y_k, & k<k_c,
-\end{cases}
+\left(1-\lambda_{\mathrm{freq}}\mathbf{1}[k\ge k_c]\right)\hat Y_k,
 \quad
 \tilde y=\mathcal{F}^{-1}(\tilde Y).
 $$
@@ -249,15 +250,22 @@ $$
 \mu=p_{(1)}-p_{(2)}.
 $$
 
-如果 router 选择 raw smoothing action $a\in\mathcal{A}_{\mathrm{smooth}}$，但 $\mu<\tau_{\mathrm{cap}}$，则触发 smoothing confidence cap：
+为避免公式过长，记
+$a_{\mathrm{bsm}}=\operatorname{BTM}$ 表示 `boundary_then_selective_median`，
+$\mathcal{A}^{\mathrm{smooth}}$ 表示 raw smoothing action 集合。如果 router 选择
+raw smoothing action $a\in\mathcal{A}^{\mathrm{smooth}}$，但
+$\mu\lt\tau_{\mathrm{cap}}$，则触发 smoothing confidence cap：
 
 $$
+C_{\mathrm{cap}}=
+\left(a\in\mathcal{A}^{\mathrm{smooth}}\right)\land
+\left(\mu\lt\tau_{\mathrm{cap}}\right),
+\quad
 \hat a=
-\begin{cases}
-\mathrm{boundary\_then\_selective\_median},
-& a\in\mathcal{A}_{\mathrm{smooth}}\ \land\ \mu<\tau_{\mathrm{cap}},\\
-a, & \mathrm{otherwise}.
-\end{cases}
+\begin{aligned}[t]
+&a_{\mathrm{bsm}}, && \text{if } C_{\mathrm{cap}},\\
+&a, && \text{otherwise.}
+\end{aligned}
 $$
 
 stable guard 使用 forecast 与 context 的一阶差分波动比：
@@ -268,28 +276,33 @@ $$
 {\mathrm{std}(\Delta x_{\mathrm{tail}})+\epsilon}.
 $$
 
-当 raw smoothing 被选中且 $\rho_{\Delta}<\tau_{\mathrm{stable}}$ 时，预测已经较稳定，继续 smoothing 更容易造成过修正。safe variant 将这类样本改派到 selective fallback：
+当 raw smoothing 被选中且 $\rho_{\Delta}\lt\tau_{\mathrm{stable}}$ 时，预测已经较稳定，继续 smoothing 更容易造成过修正。safe variant 将这类样本改派到 selective fallback：
 
 $$
+C_{\mathrm{safe}}=
+\left(a\in\mathcal{A}^{\mathrm{smooth}}\right)\land
+\left(\rho_{\Delta}\lt\tau_{\mathrm{stable}}\right),
+\quad
 \hat a_{\mathrm{safe}}=
-\begin{cases}
-\mathrm{boundary\_then\_selective\_median},
-& a\in\mathcal{A}_{\mathrm{smooth}}\ \land\ \rho_{\Delta}<\tau_{\mathrm{stable}},\\
-\hat a, & \mathrm{otherwise}.
-\end{cases}
+\begin{aligned}[t]
+&a_{\mathrm{bsm}}, && \text{if } C_{\mathrm{safe}},\\
+&\hat a, && \text{otherwise.}
+\end{aligned}
 $$
 
 conditional stable-cap variant 还加入 unsupported-noise score $u(\phi)$，只在稳定且 unsupported noise 低的情况下触发 veto：
 
 $$
+C_{\mathrm{cond}}=
+\left(a\in\mathcal{A}^{\mathrm{smooth}}\right)\land
+\left(\rho_{\Delta}\lt\tau_{\mathrm{stable}}\right)\land
+\left(u(\phi)\leq\tau_{\mathrm{u}}\right),
+\quad
 \hat a_{\mathrm{cond}}=
-\begin{cases}
-\mathrm{boundary\_then\_selective\_median},
-& a\in\mathcal{A}_{\mathrm{smooth}}
-\land \rho_{\Delta}<\tau_{\mathrm{stable}}
-\land u(\phi)\le \tau_u,\\
-\hat a, & \mathrm{otherwise}.
-\end{cases}
+\begin{aligned}[t]
+&a_{\mathrm{bsm}}, && \text{if } C_{\mathrm{cond}},\\
+&\hat a, && \text{otherwise.}
+\end{aligned}
 $$
 
 这一阶段的机制含义更明确：raw smoothing 保留为高收益动作；低置信或低噪声支撑的 smoothing 会被降级为 selective residual repair；stable guard 则控制外部未知预测表上的过修正风险。
