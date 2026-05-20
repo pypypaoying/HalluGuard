@@ -149,10 +149,10 @@ g_1=\Delta \hat y_1-\Delta x_L,
 $$
 
 $$
-g_2=
-\mathrm{mean}(\Delta^2\hat y_{1:h})
+g_2 =
+\mathrm{mean}\!\left(\Delta^2 \hat{y}_{1:h}\right)
 -
-\mathrm{mean}(\Delta^2x_{L-h+1:L}).
+\mathrm{mean}\!\left(\Delta^2 x_{L-h+1:L}\right).
 $$
 
 局部动态风险 score 为
@@ -251,7 +251,7 @@ $$
 $$
 
 为避免公式过长，记
-$a_{\mathrm{bsm}}=\operatorname{BTM}$ 表示 `boundary_then_selective_median`，
+$a_{\mathrm{bsm}}-\mathrm{BTM}$ 表示 `boundary_then_selective_median`，
 $\mathcal{A}^{\mathrm{smooth}}$ 表示 raw smoothing action 集合。如果 router 选择
 raw smoothing action $a\in\mathcal{A}^{\mathrm{smooth}}$，但
 $\mu\lt\tau_{\mathrm{cap}}$，则触发 smoothing confidence cap：
