@@ -14,15 +14,19 @@ HalluGuard 面向这个 gap：它在 test time 接收 recent context 和 raw for
 - 分布漂移和 test-time adaptation 文献说明，test-time 的输入/输出环境确实可能需要额外校正。
 - 强 baseline 文献提醒，如果 correction 只是变成 naive smoothing，就没有足够机制价值，所以必须持续和 random trigger、matched smoothing 等控制组比较。
 
-参考论文：
+参考论文与对应启发：
 
-- PatchTST: [A Time Series is Worth 64 Words: Long-term Forecasting with Transformers](https://arxiv.org/abs/2211.14730)
-- DLinear: [Are Transformers Effective for Time Series Forecasting?](https://arxiv.org/abs/2205.13504)
-- Autoformer: [Decomposition Transformers with Auto-Correlation for Long-Term Series Forecasting](https://arxiv.org/abs/2106.13008)
-- FEDformer: [Frequency Enhanced Decomposed Transformer for Long-term Series Forecasting](https://arxiv.org/abs/2201.12740)
-- RevIN: [Reversible Instance Normalization for Accurate Time-Series Forecasting against Distribution Shift](https://openreview.net/forum?id=cGDAkQo1C0p)
-- Non-stationary Transformers: [Exploring the Stationarity in Time Series Forecasting](https://arxiv.org/abs/2205.14415)
-- TENT: [Fully Test-Time Adaptation by Entropy Minimization](https://arxiv.org/abs/2006.10726)
+- [PatchTST: A Time Series is Worth 64 Words](https://arxiv.org/abs/2211.14730)：提供 PatchTST backbone 和 long-horizon benchmark 语境，也暴露了 strong neural forecaster 仍需要输出层诊断的研究入口。
+- [Are Transformers Effective for Time Series Forecasting?](https://arxiv.org/abs/2205.13504)：DLinear/LTSF-Linear 说明简单线性模型在长期预测中很强，因此 HalluGuard 的实验必须和 strong baseline、matched smoothing、random trigger 对照，避免只报告后处理带来的表面增益。
+- [Autoformer](https://arxiv.org/abs/2106.13008)：趋势/季节分解启发了第一版 trend-frequency HalluGuard，把 forecast risk 拆成趋势结构和残差结构。
+- [FEDformer](https://arxiv.org/abs/2201.12740)：频域增强和分解思路启发了 high-frequency energy、spectral distance 和 unsupported oscillation 这类诊断量。
+- [STL: A Seasonal-Trend Decomposition Procedure Based on Loess](https://www.scienceopen.com/document?vid=be074647-46c0-4ba9-991e-3124fbf63ed1)：经典时间序列分解思路支撑了“trend / seasonal-frequency / residual”分层看 forecast failure 的方法。
+- [RevIN](https://openreview.net/forum?id=cGDAkQo1C0p)：实例级归一化与反归一化启发了使用 recent context 的局部 scale、variance ratio 和 diff std ratio，而不直接依赖训练集全局统计。
+- [Non-stationary Transformers](https://arxiv.org/abs/2205.14415)：非平稳性处理启发了对 level shift、trend drift、variance shift 等 stress cases 的单独测试。
+- [Test-Time Training](https://arxiv.org/abs/1909.13231) 与 [TENT](https://arxiv.org/abs/2006.10726)：test-time adaptation 文献提供了“部署时仍可校正”的动机；本项目选择 output-level correction，避免要求访问 backbone 参数或梯度。
+- [Robust Statistics: The Approach Based on Influence Functions](https://academic.oup.com/jrsssa/article/150/3/281/7106199)：robust statistics 中的中位数、局部异常和抗 outlier 思路启发了 selective median residual repair。
+- [Adaptive Mixtures of Local Experts](https://doi.org/10.1162/neco.1991.3.1.79)：gating / expert selection 思路启发了 router，把 no correction、boundary repair、dynamics repair、smoothing 和 selective repair 当作不同 action。
+- [SelectiveNet](https://proceedings.mlr.press/v97/geifman19a.html)：selective prediction 和 reject option 启发了 margin-abstain、smoothing cap、stable veto 等低置信 fallback 机制。
 
 ## 2. Research Path
 
