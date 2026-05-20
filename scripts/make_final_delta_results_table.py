@@ -108,6 +108,7 @@ def draw_table() -> None:
         "Stress\nMSE delta",
         "External PatchTST\nMSE delta",
     ]
+    headers = [headers[0]] + [f"{header}\n(%)" for header in headers[1:]]
     for i, label in enumerate(headers):
         ax.text(
             (xs[i] + xs[i + 1]) / 2,
@@ -122,8 +123,11 @@ def draw_table() -> None:
             linespacing=1.08,
         )
 
-    num_color = "#ff1f1f"
-    harm_color = "#c40000"
+    best_color = "#ff1f1f"
+    default_color = "black"
+    best_by_col = []
+    for key in ("clean", "clean_patch", "stress", "external_patch"):
+        best_by_col.append(min(row[key] for row in ROWS))
 
     for ri, row in enumerate(ROWS):
         y_top = header_bottom - ri * row_h
@@ -147,7 +151,7 @@ def draw_table() -> None:
         values = [row["clean"], row["clean_patch"], row["stress"], row["external_patch"]]
         for vi, value in enumerate(values):
             ci = vi + 1
-            is_harm = value > 0
+            is_best = abs(value - best_by_col[vi]) < 1e-12
             ax.text(
                 (xs[ci] + xs[ci + 1]) / 2,
                 y,
@@ -157,7 +161,7 @@ def draw_table() -> None:
                 fontsize=13.5,
                 fontweight="bold",
                 fontfamily="DejaVu Serif",
-                color=harm_color if is_harm else num_color,
+                color=best_color if is_best else default_color,
             )
 
     ax.text(
