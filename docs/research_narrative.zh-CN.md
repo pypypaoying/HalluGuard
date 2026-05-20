@@ -419,6 +419,10 @@ flowchart LR
 
 所有主表都使用 MSE delta percentage，相对 uncorrected forecast，负数越好。clean benchmark 覆盖 DLinear 和 PatchTST 的多 horizon 配置；stress benchmark 覆盖 boundary discontinuity、trend drift、slope break、delayed level shift、high-frequency perturbation 和 variance shift；external fixture 目前只作为 harm diagnostic，不作为泛化结论。
 
+下图汇总主要版本在四个关键 delta 指标上的表现。Final HalluGuard 在 clean MSE、Clean PatchTST 和 stress MSE 上取得当前主线最强结果，说明 smoothing-cap selective router 对内部 benchmark 和针对性 stress 都有稳定收益。Base + Router 已经明显强于 Base/Dynamics，但 external PatchTST 出现轻微正 delta，暴露出过度修正风险；Final HalluGuard 将该项拉回负值，但幅度仍小于专门的 stable guard 变体，因此 external fixture 目前更适合作为 harm diagnostic，而不是泛化 claim。
+
+![Final Delta Results](figures/final_delta_results_table.png)
+
 下面的验证表单独展示四类 targeted stress 与 matched smoothing control。matched smoothing control 使用与主方法相同的触发/修正率，因此可以检验收益是否只是来自“同等比例的平滑”。结果显示，最终机制在四类目标 stress 上平均达到 `-2.436%` MSE delta，而 matched smoothing control 为 `-0.835%`；在 64 个 dataset-backbone-horizon 配置中胜过 matched control 63 个。
 
 ![Validation Stress Tests](figures/validation_stress_results_table.png)
