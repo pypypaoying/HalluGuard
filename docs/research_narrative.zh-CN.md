@@ -149,10 +149,7 @@ g_1=\Delta \hat y_1-\Delta x_L,
 $$
 
 $$
-g_2=
-\mathrm{mean}(\Delta^2\hat y_{1:h})
--
-\mathrm{mean}(\Delta^2x_{L-h+1:L}).
+g_2=\mathrm{mean}\left(\Delta^2 \hat{y}_{1:h}\right)-\mathrm{mean}\left(\Delta^2 x_{L-h+1:L}\right).
 $$
 
 其中 $h=\min(16,H,L)$，用短窗口估计预测头部和 context 尾部的平均二阶差分。三个分量先按 context scale 标准化：
@@ -276,7 +273,7 @@ $$
 $$
 
 为避免公式过长，记
-$a_{\mathrm{bsm}}=\operatorname{BTM}$ 表示 `boundary_then_selective_median`，
+$a_{\mathrm{bsm}}-\mathrm{BTM}$ 表示 `boundary_then_selective_median`，
 $\mathcal{A}^{\mathrm{smooth}}$ 表示 raw smoothing action 集合。如果 router 选择
 raw smoothing action $a\in\mathcal{A}^{\mathrm{smooth}}$，但
 $\mu\lt\tau_{\mathrm{cap}}$，则触发 smoothing confidence cap：
