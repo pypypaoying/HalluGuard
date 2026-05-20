@@ -407,6 +407,10 @@ flowchart LR
 
 所有主表都使用 MSE delta percentage，相对 uncorrected forecast，负数越好。clean benchmark 覆盖 DLinear 和 PatchTST 的多 horizon 配置；stress benchmark 覆盖 boundary discontinuity、trend drift、slope break、delayed level shift、high-frequency perturbation 和 variance shift；external fixture 目前只作为 harm diagnostic，不作为泛化结论。
 
+下面的验证表单独展示四类 targeted stress 与 matched smoothing control。matched smoothing control 使用与主方法相同的触发/修正率，因此可以检验收益是否只是来自“同等比例的平滑”。结果显示，最终机制在四类目标 stress 上平均达到 `-2.436%` MSE delta，而 matched smoothing control 为 `-0.835%`；在 64 个 dataset-backbone-horizon 配置中胜过 matched control 63 个。
+
+![Validation Stress Tests](figures/validation_stress_results_table.png)
+
 | Method | Role | Clean MSE | Clean PatchTST | Stress MSE | External PatchTST | Key Evidence |
 |---|---|---:|---:|---:|---:|---|
 | Trend-frequency correction | First module | -0.058% | not selected | -0.104% stress probe | not selected | Improved 15/16 but random separation was weak |
