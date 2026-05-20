@@ -70,11 +70,11 @@ Router 的输入特征全部是 target-free 的 forecast/context 特征，包括
 
 ![Time-Series Failure Modes](figures/time_series_failure_modes.png)
 
-下面公式对应三张架构图中的三个阶段。记 recent context 为 $x_{1:L}$，raw forecast 为 $\hat y_{1:H}$，target 为 $y_{1:H}$，context scale 为 $\sigma_x=\mathrm{std}(x_{1:L})+\epsilon$。所有阈值只从 validation split 估计，test split 只用于最终评价。
+下面公式覆盖 Base HalluGuard、HalluGuard-Dynamics、Router-Augmented HalluGuard 和最终 smoothing-cap selective mechanism。记 recent context 为 $x_{1:L}$，raw forecast 为 $\hat y_{1:H}$，target 为 $y_{1:H}$，context scale 为 $\sigma_x=\mathrm{std}(x_{1:L})+\epsilon$。所有阈值只从 validation split 估计，test split 只用于最终评价。
 
 ### 3.1 Base HalluGuard: trend-frequency scoring and correction
 
-第一阶段把 forecast-level risk 写成趋势偏移和频率偏移。设 $\beta(z)$ 表示序列 $z$ 的 OLS slope，$\mathcal{F(z)}_k$ 表示离散傅里叶系数，$k_c$ 是高频 cutoff。趋势风险为
+第一阶段把 forecast-level risk 写成趋势偏移和频率偏移。设 $\beta(z)$ 表示序列 $z$ 的 OLS slope，$\mathcal{F}(z)_k$ 表示离散傅里叶系数，$k_c$ 是高频 cutoff。趋势风险为
 
 $$
 s_{\mathrm{trend}}(\hat y, x)=\frac{H\cdot |\beta(\hat y)-\beta(x)|}{\sigma_x}.
@@ -130,9 +130,9 @@ $$
 
 该阶段的核心假设是：当 forecast 的 slope 或 high-frequency structure 明显偏离 recent context 时，小幅输出修正可以降低局部动态错误。
 
-### 3.2 Router-Augmented HalluGuard: local dynamics and action selection
+### 3.2 HalluGuard-Dynamics: boundary and local continuity repair
 
-第二阶段把 risk 从全局趋势/频率转向 forecast 起点附近的局部连续性。记
+Dynamics version 把 risk 从全局趋势/频率转向 forecast 起点附近的局部连续性。记
 
 $$
 \Delta x_L=x_L-x_{L-1}, \quad \Delta \hat y_1=\hat y_2-\hat y_1.
@@ -155,26 +155,51 @@ g_2=
 \mathrm{mean}(\Delta^2x_{L-h+1:L}).
 $$
 
+其中 $h=\min(16,H,L)$，用短窗口估计预测头部和 context 尾部的平均二阶差分。三个分量先按 context scale 标准化：
+
+$$
+s_b=\frac{|b|}{\sigma_x},\quad
+s_1=\frac{|g_1|}{\sigma_x},\quad
+s_2=\frac{|g_2|}{\sigma_x}.
+$$
+
 局部动态风险 score 为
 
 $$
 s_{\mathrm{dyn}}
-=\frac{|b|}{\sigma_x}
-+\frac{1}{2}\frac{|g_1|}{\sigma_x}
-+\frac{1}{4}\frac{|g_2|}{\sigma_x}.
+=s_b+\frac{1}{2}s_1+\frac{1}{4}s_2.
 $$
 
-对应的 boundary/dynamics correction vector 使用 horizon 衰减：
+触发阈值来自 validation split 的分位数，而不是人工假设某个绝对数值：
 
 $$
-u_t=\frac{t-1}{H-1},\quad d_t=\exp\left(-\frac{t-1}{\rho}\right),
-$$
-
-$$
-v_t=-b\,d_t-g_1\,u_t d_t-g_2\,u_t^2 d_t,
+\tau_{\mathrm{dyn}}=
+Q_q\left(\{s_{\mathrm{dyn}}^{(i)}\}_{i\in\mathcal{D}_{\mathrm{val}}}\right),
 \quad
-\tilde y_t=\hat y_t+\alpha v_t.
+M_{\mathrm{dyn}}=\mathbf{1}[s_{\mathrm{dyn}}\geq\tau_{\mathrm{dyn}}].
 $$
+
+对应的 boundary/dynamics correction vector 使用 horizon 衰减。对第 $t$ 个预测点，
+
+$$
+u_t=\frac{t-1}{\max(H-1,1)},\quad
+d_t=\exp\left(-\frac{t-1}{\max(4,H/12)}\right).
+$$
+
+$$
+v_t(\eta)
+=-\eta_b b\,d_t-\eta_1 g_1\,u_t d_t-\eta_2 g_2\,u_t^2 d_t.
+$$
+
+HalluGuard-Dynamics 主版本用 $s_b,s_1,s_2$ 一起打分，但修正向量采用 $\eta=(1,1,0)$，即修正 boundary jump 和 first-difference gap，不直接把 curvature gap 写回预测。最终输出为
+
+$$
+\tilde y_t=\hat y_t+\alpha M_{\mathrm{dyn}}v_t(\eta).
+$$
+
+实验中对 $q$、$\alpha$ 和 component mask 做 validation-only 搜索，并同步比较 random trigger 与 matched smoothing control。这个设计用于区分“局部动态分数确实定位了错误”和“任意平滑都能降低 MSE”两种情况。
+
+### 3.3 Router-Augmented HalluGuard: action selection
 
 Router 把多个 action 放入集合
 
@@ -212,7 +237,7 @@ $$
 
 为避免 router 退化成单一动作，实验中同步评价 random-action router、matched-smoothing control 和 shuffled-feature router。只有当主 router 同时优于这些控制组时，action selection 才被视为有机制贡献。
 
-### 3.3 Final Mechanism: smoothing cap and selective fallback
+### 3.4 Final Mechanism: smoothing cap and selective fallback
 
 第三阶段聚焦 raw smoothing 的收益/伤害 tradeoff。核心动作 `boundary_then_selective_median` 先应用 boundary repair，得到 $y^{b}$，再只处理 context 不支持的 residual spike。设
 
