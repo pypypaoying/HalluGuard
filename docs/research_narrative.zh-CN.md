@@ -149,10 +149,7 @@ g_1=\Delta \hat y_1-\Delta x_L,
 $$
 
 $$
-g_2 =
-\mathrm{mean}\!\left(\Delta^2 \hat{y}_{1:h}\right)
--
-\mathrm{mean}\!\left(\Delta^2 x_{L-h+1:L}\right).
+g_2=\mathrm{mean}\left(\Delta^2 \hat{y}_{1:h}\right)-\mathrm{mean}\left(\Delta^2 x_{L-h+1:L}\right).
 $$
 
 局部动态风险 score 为
