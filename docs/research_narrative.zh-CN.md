@@ -64,6 +64,18 @@ Router 的输入特征全部是 target-free 的 forecast/context 特征，包括
 - 直接使用 raw smoothing 会带来 external PatchTST harm 风险，说明 smoothing 必须被限制。
 - `boundary_then_selective_median` 是一个有效新动作：先做 boundary repair，再只对 context 不支持的 residual spike 做局部 median damping。
 
+这里的 raw smoothing 指直接把 median smoothing、EMA smoothing 或 naive moving-average smoothing 作用到整个 forecast horizon，或者大比例作用到 horizon 上。它通常能降低噪声和尖峰，因此在 clean/stress MSE 上很有吸引力；但当 forecast 本身已经稳定，或者其局部波动是真实动态的一部分时，继续 smoothing 会压低有效变化、制造相位滞后，并抹掉 PatchTST 已经学到的短期形态。external harm 指在 external fixture 上，修正后 MSE 高于 no-correction forecast，即 MSE delta 为正。早期 adaptive router 在 external PatchTST 上出现 `4/8` harmed configs，说明该 router 在部分外部 PatchTST 预测上过度选择了 smoothing 类动作。
+
+自动迭代中的主要候选方向如下：
+
+| Candidate direction | What it actually did | Observed behavior | Reflection |
+|---|---|---|---|
+| turning-point protection | 识别 context 支持的 turning/curvature zone，在这些位置抑制 smoothing，避免真实转折被抹平。 | clean/stress 变弱。 | 只保护转折不足以覆盖主要误差来源，且会减少有用 smoothing。 |
+| anti-smoothing objective | 在 validation objective 中加入 matched smoothing penalty，惩罚过于接近同触发率 smoothing control 的策略。 | 没有明显超过 router parent。 | 只在目标函数里惩罚 smoothing 不够；router 仍可能选择局部最省误差的 smoothing action。 |
+| stable forecast guard 初版 | 用 diff std ratio、局部稳定性等 target-free 特征识别已经稳定的 forecast，并降低 correction/action rate。 | action rate 下降，但收益也下降。 | guard 不能只把样本导向 no correction；需要配合更温和的 selective fallback。 |
+| capped logistic router | 训练 validation-only logistic router，并加入 dominant-action cap，限制单一 action 占比。 | clean 有提升，但 action collapse 仍然存在。 | learned router 容易学习到“多选 smoothing”的捷径，尤其在 validation label 偏向 smoothing 时。 |
+| margin abstain | 用 top-1 与 top-2 action probability 的 margin 判断置信度；低置信时 abstain 或 fallback。 | abstain 不够稳定。 | 单独依赖置信度阈值不能解决外部 harm，因为高置信 smoothing 也可能在外部稳定预测上过修正。 |
+
 最终最强 clean/stress 主机制是 smoothing-cap selective router：先用 margin-abstain router 做 action selection；如果 router 选择了 raw smoothing 但置信 margin 不够，就 fallback 到 `boundary_then_selective_median`。这保留 smoothing 的收益，同时减少低置信 smoothing 的过度修正。
 
 同时，stable smoothing-cap guard 能进一步降低 external PatchTST harm：当 prediction 已经很稳定、diff std ratio 低时，对 raw smoothing 触发 stable veto，并 fallback 到 selective repair。它在 external fixture 上把 PatchTST harmed configs 从 4/8 降到 0/8，同时 clean/stress 稍弱，因此当前定位为 harm-diagnostic variant；主 clean/stress snapshot 仍采用 smoothing-cap selective router。
