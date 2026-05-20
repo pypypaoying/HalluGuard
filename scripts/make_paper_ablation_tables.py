@@ -36,7 +36,7 @@ FIG1 = {
 
 FIG2 = {
     "filename": "router_vs_base_matched_table",
-    "caption": "Router augmentation improves over Base HalluGuard, Dynamics, and the matched smoothing control.",
+    "caption": "Final HalluGuard improves over the matched smoothing control and earlier module versions.",
     "methods": [
         {
             "name": "Matched\nsmoothing\nbaseline",
@@ -57,6 +57,11 @@ FIG2 = {
             "name": "Base +\nRouter",
             "mse": [4.056, 6.000, 7.072, 10.325, 6.863],
             "mae": [1.483, 1.845, 2.032, 2.478, 1.960],
+        },
+        {
+            "name": "Final\nHalluGuard",
+            "mse": [3.995, 5.929, 7.034, 10.296, 6.813],
+            "mae": [1.466, 1.830, 2.025, 2.472, 1.948],
         },
     ],
 }
