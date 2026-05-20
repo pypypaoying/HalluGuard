@@ -411,6 +411,10 @@ flowchart LR
 
 ![Validation Stress Tests](figures/validation_stress_results_table.png)
 
+external fixture 用于检查外部预测表上的 harm 风险。该 fixture 包含 16 个配置：ETTh1/ETTm1、DLinear/PatchTST、96/192/336/720 四个 horizon，每个配置 32 个样本。早期 adaptive router 在 DLinear 上表现稳定，但 PatchTST 出现 4/8 个配置 MSE delta 为正，说明该 router 在部分 PatchTST forecast 上会把可接受预测过度修正。下表展示了这个 harm diagnostic。
+
+![External PatchTST Harm Diagnostic](figures/external_patchtst_harm_table.png)
+
 | Method | Role | Clean MSE | Clean PatchTST | Stress MSE | External PatchTST | Key Evidence |
 |---|---|---:|---:|---:|---:|---|
 | Trend-frequency correction | First module | -0.058% | not selected | -0.104% stress probe | not selected | Improved 15/16 but random separation was weak |
