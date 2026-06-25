@@ -1,0 +1,168 @@
+protocol_version: core_table_v1_2026_06_23
+purpose: >
+  Frozen HalluGuard-SP comparison against same-position test-time correction,
+  smoothing, normalization, non-stationary adaptation, and test-time adaptation
+  baselines. This manifest is an evaluation contract, not an autosearch config.
+
+frozen_halluguard:
+  main_method_id: halluguard_sp_frozen
+  main_candidate: s14_smoothing_cap_selective_router
+  main_config: experiments/halluguard/configs/halluguard_core_table_sp_frozen.yaml
+  harm_ablation_method_id: halluguard_stable_harm_ablation
+  harm_ablation_candidate: s14_stable_smoothing_cap_router
+  harm_ablation_config: experiments/halluguard/configs/halluguard_core_table_stable_harm.yaml
+  calibration_split: val
+  evaluation_split: test
+  test_threshold_leakage_allowed: false
+
+datasets:
+  core:
+    - ETTm1
+    - ETTh1
+    - Weather
+    - Electricity
+  optional_extended:
+    - ETTm2
+    - ETTh2
+    - Traffic
+  source:
+    name: THUML Time-Series-Library Hugging Face dataset
+    repo_id: thuml/Time-Series-Library
+    local_root: external/Time-Series-Library/dataset
+    setup_script: scripts/fetch_core_datasets.py
+
+backbones:
+  primary:
+    - DLinear
+    - PatchTST
+  sanity:
+    - DLinear
+  optional_external:
+    - iTransformer
+    - TimeMixer
+
+horizons:
+  - 96
+  - 192
+  - 336
+  - 720
+
+methods:
+  - id: raw_no_correction
+    label: raw_no_correction
+    category: raw_forecaster
+    source: local_prediction_export
+    deployable: true
+  - id: halluguard_sp_frozen
+    label: HalluGuard-SP frozen
+    category: validation_only_postprocessor
+    source: local_halluguard
+    candidate: s14_smoothing_cap_selective_router
+    deployable: true
+  - id: halluguard_stable_harm_ablation
+    label: HalluGuard stable-harm ablation
+    category: validation_only_postprocessor_ablation
+    source: local_halluguard
+    candidate: s14_stable_smoothing_cap_router
+    deployable: true
+  - id: matched_sparse_smoothing
+    label: matched_sparse_smoothing
+    category: smoothing_control
+    source: local_halluguard
+    deployable: true
+  - id: naive_smoothing
+    label: naive_smoothing
+    category: smoothing_control
+    source: local_halluguard
+    deployable: true
+  - id: ema_smoothing
+    label: ema_smoothing
+    category: smoothing_control
+    source: local_halluguard
+    deployable: true
+  - id: median_smoothing
+    label: median_smoothing
+    category: smoothing_control
+    source: local_halluguard
+    deployable: true
+  - id: revin
+    label: RevIN
+    category: reversible_normalization
+    source: official_repo
+    repo_key: RevIN
+    deployable: true
+  - id: dish_ts
+    label: Dish-TS
+    category: distribution_shift_plugin
+    source: official_repo
+    repo_key: Dish-TS
+    deployable: true
+  - id: san
+    label: SAN
+    category: adaptive_normalization
+    source: official_repo
+    repo_key: SAN
+    deployable: true
+  - id: nst
+    label: Non-stationary Transformer / NST
+    category: non_stationary_transformer
+    source: official_repo
+    repo_key: Nonstationary_Transformers
+    deployable: true
+  - id: tafas
+    label: TAFAS
+    category: test_time_adaptation
+    source: official_repo
+    repo_key: TAFAS
+    deployable: conditional
+    caveat: Report separately if it uses feedback unavailable to other methods.
+
+official_repos:
+  RevIN:
+    url: https://github.com/ts-kim/RevIN.git
+    commit: fee40bc6c87cb536d048bcf1c14c4ed644b875e1
+    local_path: external/plugin_baselines/RevIN
+  Dish-TS:
+    url: https://github.com/weifantt/Dish-TS.git
+    commit: e674d3b94b832491f63a533d60e40a75031d2c75
+    local_path: external/plugin_baselines/Dish-TS
+  SAN:
+    url: https://github.com/icantnamemyself/SAN.git
+    commit: 7e1ca66251a91a89290846b310145c5f5db3ffc3
+    local_path: external/plugin_baselines/SAN
+  Nonstationary_Transformers:
+    url: https://github.com/thuml/Nonstationary_Transformers.git
+    commit: c4ec40675d11d50b3d9923657f408d0db6f90f56
+    local_path: external/plugin_baselines/Nonstationary_Transformers
+  TAFAS:
+    url: https://github.com/kimanki/TAFAS.git
+    commit: 139bf980671da4daad728a0fc21d8df508b9203d
+    local_path: external/plugin_baselines/TAFAS
+
+prediction_schema:
+  required_fields:
+    - sample_id
+    - dataset
+    - model
+    - split
+    - context
+    - prediction
+    - target
+  split_contract:
+    calibration: val only
+    final_evaluation: test only
+
+reporting_fields:
+  - dataset
+  - backbone
+  - method
+  - horizon
+  - mse
+  - mae
+  - mse_delta_pct_vs_raw
+  - mae_delta_pct_vs_raw
+  - mse_delta_pct_vs_halluguard_sp
+  - validation_only_calibration
+  - prediction_path
+  - output_dir
+  - blocker_reason

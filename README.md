@@ -1,68 +1,131 @@
 # HalluGuard
 
-[English](README.md) | [中文](README.zh-CN.md)
+This repository publishes the current clean-claim HalluGuard implementation and
+the latest expanded BigTable results.
 
-HalluGuard is a lightweight test-time correction layer for time-series forecasts. It is designed for cases where a forecasting model produces predictions that look plausible but violate local dynamics, such as boundary jumps, trend changes, or unsupported high-frequency behavior.
+Main method:
 
-The current version is a research prototype. It does not retrain the forecasting model. Instead, it takes the model forecast and recent context, estimates whether the forecast is dynamically suspicious, and applies a small correction only when validation-calibrated rules say the correction is likely to help.
+```text
+HalluGuard-LRBN unified_revin_rdn_hybrid
+```
 
-## Motivation
+HalluGuard-LRBN is a learnable reversible boundary normalization wrapper for
+time-series forecasting backbones. It normalizes each input window with a
+learned mixture of boundary/instance centers and robust/instance scales, runs the
+forecasting backbone in the normalized space, and reverses the transform on the
+output. The current claim is a clean forecasting robustness claim, not a
+test-threshold-tuned correction claim.
 
-Modern time-series forecasters can be accurate on average while still producing locally inconsistent forecasts. Common failure modes include:
+## What Is Included
 
-- smoothing over abrupt level shifts;
-- missing slope or trend changes;
-- introducing high-frequency artifacts not supported by the recent context;
-- over-correcting already stable forecasts.
+- `scripts/run_clean_claim_bigtable.sh`: one-command expanded BigTable runner.
+- `scripts/run_lrbn_clean_claim_bigtable.py`: orchestration script for datasets,
+  backbones, seeds, methods, and aggregate reports.
+- `scripts/run_halluguard_lrbn.py`: LRBN implementation and training/evaluation
+  harness.
+- `external/halluguard_real_pipeline/`: unified prediction/export pipeline.
+- `external/Time-Series-Library/`: public backbone implementations used for
+  iTransformer, TimesNet, and TimeMixer integration.
+- `external/plugin_baselines/`: public test-time/adaptation baselines used by
+  the comparison table.
+- `results/lrbn_clean_claim_bigtable_v2_expanded_latest/`: latest uploaded
+  4620-row expanded BigTable result.
 
-HalluGuard studies whether these failures can be reduced by a model-agnostic post-processing module that runs at inference time.
+## Server Quick Start
 
-## Current Approach
+```bash
+git clone https://github.com/pypypaoying/HalluGuard.git
+cd HalluGuard
 
-The strongest current line combines three ideas:
+conda env create -f environment.yml
+conda activate halluguard-run
 
-- **Boundary-aware repair**: detect and repair local discontinuities near forecast boundaries.
-- **Selective residual smoothing**: smooth only local residual spikes instead of smoothing the full prediction horizon.
-- **Validation-calibrated routing**: choose between no correction, boundary repair, smoothing, and selective repair using validation-only thresholds, while checking against random-action and matched-smoothing controls.
+FETCH_DATA=1 \
+DEVICE=cuda \
+EPOCHS=10 \
+MAX_TRAIN_WINDOWS=8192 \
+MAX_EVAL_WINDOWS=1024 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_clean_claim_bigtable_v1 \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-This design aims to improve forecast quality without collapsing into a generic smoothing baseline.
+If the environment already exists:
 
-## Preliminary Experiments
+```bash
+git pull
+conda activate halluguard-run
 
-Initial experiments were run on standard time-series forecasting fixtures using DLinear and PatchTST across multiple horizons. The evaluation currently includes:
+FETCH_DATA=1 \
+DEVICE=cuda \
+EPOCHS=10 \
+MAX_TRAIN_WINDOWS=8192 \
+MAX_EVAL_WINDOWS=1024 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_clean_claim_bigtable_v1 \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-- a clean benchmark table;
-- synthetic stress tests for boundary changes, trend drift, slope breaks, delayed level shifts, high-frequency perturbations, and variance shifts;
-- a compact external fixture used mainly as a harm diagnostic.
+For a small smoke run:
 
-The main metric is MSE delta percentage against the uncorrected forecast. Negative values are better.
+```bash
+DATASETS=ETTm1 \
+BACKBONES=DLinear \
+HORIZONS=96 \
+SEEDS=2026 \
+METHODS=raw_no_correction,HalluGuard-LRBN,RevIN,NST,median_smoothing \
+FETCH_DATA=1 \
+DEVICE=cpu \
+EPOCHS=1 \
+MAX_TRAIN_WINDOWS=128 \
+MAX_EVAL_WINDOWS=32 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_smoke \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-| Method | Role | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | Notes |
-|---|---|---:|---:|---:|---:|---|
-| Adaptive router baseline | Previous baseline | -1.289% | -0.298% | -1.391% | +0.004% | Strong internal baseline, weak PatchTST external harm profile |
-| Boundary-selective adaptive router | Best completed clean/stress result | -2.164% | -0.553% | -2.488% | -0.046% | Strongest fully completed clean/stress candidate |
-| Smoothing-cap selective router | Clean/stress leader | -2.193% | -0.617% | -2.509% | -0.065% | Best clean and stress result so far, but external PatchTST harm is only partially improved |
-| Stable smoothing-cap guard | External-harm guard | -2.135% | -0.571% | -2.463% | -0.366% | Best PatchTST harm reduction on the external fixture, with 0/8 harmed PatchTST configurations |
-| Conditional stable-cap guard | Compromise candidate | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains while improving external behavior, but does not fully remove PatchTST harm |
+## Default Expanded BigTable
 
-See [preliminary results](docs/preliminary_results.md), [research narrative and architecture notes](docs/research_narrative.zh-CN.md), and [CSV table](results/preliminary_results.csv) for the current snapshot.
+- Datasets: `ETTm1`, `ETTm2`, `ETTh1`, `ETTh2`, `Weather`, `ECL`, `Traffic`
+- Backbones: `DLinear`, `PatchTST`, `iTransformer`, `TimesNet`, `TimeMixer`
+- Horizons: `96`, `192`, `336`, `720`
+- Seeds: `2026`, `2027`, `2028`
+- Methods:
+  - `raw_no_correction`
+  - `HalluGuard-LRBN`
+  - `matched_sparse_smoothing`
+  - `naive_smoothing`
+  - `ema_smoothing`
+  - `median_smoothing`
+  - `RevIN`
+  - `DishTS`
+  - `SAN`
+  - `NST`
+  - `TAFAS`
 
-## Current Takeaway
+The runner writes every requested row as `completed`, `failed`, or `blocked`.
+The latest uploaded table completed all 4620 rows with
+`test_threshold_leakage=False`.
 
-The early evidence suggests that HalluGuard is useful as a post-processing module for time-series forecasts, especially under clean and stress-test settings. The most promising mechanism is not full-horizon smoothing, but local boundary repair plus selective residual smoothing with validation-only routing and confidence-capped smoothing deployment.
+## Latest Result Snapshot
 
-External generalization is not yet a settled claim. The current external fixture is useful for detecting harm, especially on PatchTST-like forecasts. A stable-forecast guard can remove the observed PatchTST harm in this fixture, but it trades off some clean/stress performance, so larger and more diverse external benchmarks are still needed.
+See:
 
-## Future Work and Expected Outcomes
+- `results/lrbn_clean_claim_bigtable_v2_expanded_latest/summary.md`
+- `results/lrbn_clean_claim_bigtable_v2_expanded_latest/combined_metrics.csv`
 
-- Freeze the current clean/stress leader as the main research snapshot and separate it from safety-oriented diagnostic variants.
-- Expand external evaluation to more datasets, forecasting backbones, and horizons, with a focus on identifying where HalluGuard should correct and where it should abstain.
-- Package the correction module behind a simple API that accepts exported forecast tables and returns corrected forecasts, selected actions, confidence scores, and diagnostics.
-- Add reproducible scripts for benchmark generation, correction, result aggregation, and action-level case studies.
-- Study safety-aware routing for already stable forecasts, especially PatchTST-like external cases where aggressive smoothing may harm.
+Key aggregate from the latest uploaded table:
 
-The expected project outcome is a lightweight, model-agnostic forecast correction package that can sit behind existing time-series forecasters without retraining them. The package should expose both a performance-oriented mode for clean/stress gains and a conservative mode for low-harm deployment on unfamiliar external forecast tables.
+- HalluGuard-LRBN mean MSE delta vs raw: `-3.7952%`
+- RevIN mean MSE delta vs raw: `-3.6921%`
+- NST mean MSE delta vs raw: `-3.6155%`
+- Completed rows: `4620 / 4620`
+- Test threshold leakage: `False`
 
-## Repository Status
+The current evidence supports HalluGuard-LRBN as a competitive normalization
+wrapper. It does not support a universal-win claim; ECL remains the major weak
+dataset and some baselines have large instability.
 
-This repository currently contains an initial public-facing research snapshot: project motivation, method summary, and preliminary result tables. Code and reproducibility scripts will be organized here as the prototype stabilizes.
+## Documentation
+
+- `HALLUGUARD_LRBN.md`: method details and LRBN variant definitions.
+- `CLEAN_CLAIM_BIGTABLE_SERVER.md`: server command and matrix details.
+- `docs/BIG_TABLE_RESULTS.md`: latest result interpretation.
+- `docs/PROVENANCE.md`: source and dependency provenance.

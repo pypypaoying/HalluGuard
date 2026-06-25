@@ -1,69 +1,103 @@
 # HalluGuard
 
-[English](README.md) | [中文](README.zh-CN.md)
+本仓库发布当前收束后的 HalluGuard clean-claim 主线方法和最新扩展大表结果。
 
-HalluGuard 是一个面向时间序列预测的轻量级测试时修正模块。它在模型已经生成预测之后，检查预测曲线是否出现局部动态不一致，例如边界跳变、趋势衔接错误、过度平滑真实变化，或者生成近期上下文不支持的高频波动。
+当前主方法：
 
-当前版本是研究原型。它接收基础模型的 forecast 和 recent context，通过验证集校准过的规则或 router 判断是否需要修正，并只在预计有帮助时执行小幅 correction。
+```text
+HalluGuard-LRBN unified_revin_rdn_hybrid
+```
 
-## 研究动机
+HalluGuard-LRBN 是一个可学习的可逆边界归一化包装器。它在输入窗口上学习
+boundary/instance center 与 robust/instance scale 的混合归一化，在归一化空间
+训练/运行预测骨干模型，再把输出反归一化回原空间。当前主张是 clean forecasting
+robustness，不是基于 test threshold 的后处理调参。
 
-现代时间序列预测模型在平均指标上可以很强，但仍可能产生局部动态不可信的预测输出。典型失败模式包括：
+## 服务器一键运行
 
-- 突变或 level shift 被过度平滑；
-- forecast 起点和历史窗口末端衔接不自然；
-- 趋势、斜率或曲率变化没有跟上；
-- 生成上下文不支持的高频波动；
-- 对已经稳定的预测做过度修正。
+首次运行：
 
-HalluGuard 研究的是：能否用一个模型无关的 post-processing layer，在不重训基础模型、不访问模型梯度的情况下，减少这些局部动态错误。
+```bash
+git clone https://github.com/pypypaoying/HalluGuard.git
+cd HalluGuard
 
-## 当前方法
+conda env create -f environment.yml
+conda activate halluguard-run
 
-目前最有价值的机制由三部分组成：
+FETCH_DATA=1 \
+DEVICE=cuda \
+EPOCHS=10 \
+MAX_TRAIN_WINDOWS=8192 \
+MAX_EVAL_WINDOWS=1024 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_clean_claim_bigtable_v1 \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-- **边界感知修复**：检测 forecast 起点与历史窗口末端之间的局部不连续。
-- **选择性残差平滑**：把平滑限制在 context 不支持的局部 residual spike 上，保留预测 horizon 中的主要形态。
-- **验证集校准路由**：在 no correction、boundary repair、smoothing、selective repair 等动作之间选择，并持续与 random-action、matched-smoothing 等控制组比较。
+已有仓库时：
 
-这一设计的目标是保留 smoothing 对 MSE 的收益，同时避免退化成通用平滑器。
+```bash
+git pull
+conda activate halluguard-run
 
-## 初步实验
+FETCH_DATA=1 \
+DEVICE=cuda \
+EPOCHS=10 \
+MAX_TRAIN_WINDOWS=8192 \
+MAX_EVAL_WINDOWS=1024 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_clean_claim_bigtable_v1 \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-当前实验使用 DLinear 和 PatchTST 的预测输出，覆盖多个 horizon。评估包括：
+快速 smoke：
 
-- clean benchmark table；
-- boundary discontinuity、trend drift、slope break、delayed level shift、high-frequency perturbation、variance shift 等 stress tests；
-- compact external fixture，主要用于检查外部预测表上的 harm 风险。
+```bash
+DATASETS=ETTm1 \
+BACKBONES=DLinear \
+HORIZONS=96 \
+SEEDS=2026 \
+METHODS=raw_no_correction,HalluGuard-LRBN,RevIN,NST,median_smoothing \
+FETCH_DATA=1 \
+DEVICE=cpu \
+EPOCHS=1 \
+MAX_TRAIN_WINDOWS=128 \
+MAX_EVAL_WINDOWS=32 \
+OUTPUT_DIR=experiments/halluguard/results/lrbn_smoke \
+bash scripts/run_clean_claim_bigtable.sh
+```
 
-主指标是相对 uncorrected forecast 的 MSE delta percentage。负数表示修正后 MSE 更低。
+## 默认大表
 
-| Method | Role | Clean MSE delta | Clean PatchTST delta | Stress MSE delta | External PatchTST delta | Notes |
-|---|---|---:|---:|---:|---:|---|
-| Adaptive router baseline | Previous baseline | -1.289% | -0.298% | -1.391% | +0.004% | Strong internal baseline, weak PatchTST external harm profile |
-| Boundary-selective adaptive router | Strong selective action | -2.164% | -0.553% | -2.488% | -0.046% | Boundary plus selective median substantially improves clean/stress |
-| Smoothing-cap selective router | Clean/stress leader | -2.193% | -0.617% | -2.509% | -0.065% | Best clean and stress result so far, but external PatchTST harm is only partially improved |
-| Stable smoothing-cap guard | External-harm guard | -2.135% | -0.571% | -2.463% | -0.366% | Best PatchTST harm reduction on the external fixture, with 0/8 harmed PatchTST configurations |
-| Conditional stable-cap guard | Compromise candidate | -2.181% | -0.609% | -2.505% | -0.171% | Preserves most clean/stress gains while improving external behavior, but does not fully remove PatchTST harm |
+- 数据集：`ETTm1`, `ETTm2`, `ETTh1`, `ETTh2`, `Weather`, `ECL`, `Traffic`
+- 预测骨干：`DLinear`, `PatchTST`, `iTransformer`, `TimesNet`, `TimeMixer`
+- 预测长度：`96`, `192`, `336`, `720`
+- 种子：`2026`, `2027`, `2028`
+- 方法：
+  - `raw_no_correction`
+  - `HalluGuard-LRBN`
+  - `matched_sparse_smoothing`
+  - `naive_smoothing`
+  - `ema_smoothing`
+  - `median_smoothing`
+  - `RevIN`
+  - `DishTS`
+  - `SAN`
+  - `NST`
+  - `TAFAS`
 
-更多结果见：[preliminary results](docs/preliminary_results.md)、[研究叙事与架构说明](docs/research_narrative.zh-CN.md) 和 [CSV result table](results/preliminary_results.csv)。
+最新上传结果位于：
 
-## 当前结论
+```text
+results/lrbn_clean_claim_bigtable_v2_expanded_latest/
+```
 
-初步证据显示，HalluGuard 作为时间序列 forecast 的测试时后处理模块是有价值的。当前最有前景的机制由局部边界修复、选择性残差平滑和验证集校准 router 组成。
+其中 `combined_metrics.csv` 是完整 4620 行大表，`summary.md` 是聚合总结。
+这次结果 4620/4620 行全部完成，`test_threshold_leakage=False`。
 
-外部泛化仍需更大规模验证。当前 external fixture 更适合作为 harm diagnostic，尤其用于观察 PatchTST-like forecasts 是否会被过度修正。stable-forecast guard 能在这个 fixture 中移除观察到的 PatchTST harm，同时会牺牲一部分 clean/stress 表现，因此还需要更大规模的外部 benchmark。
+## 最新结论简述
 
-## 未来工作与期望
-
-- 冻结当前 clean/stress leader 作为公开研究快照，并把它和 safety-oriented diagnostic variants 区分清楚。
-- 扩展到更多数据集、forecasting backbone 和 horizon，重点判断 HalluGuard 何时应该修正、何时应该 abstain。
-- 将 correction module 包装成清晰 API，支持输入外部框架导出的 forecast table，并输出 corrected forecast、selected action、confidence score 和 diagnostics。
-- 增加可复现实验脚本，用于 benchmark generation、correction、result aggregation 和 action-level case study。
-- 继续研究 safety-aware routing，尤其是对已经稳定的 forecast 避免过度修正，降低 PatchTST-like external cases 上的 harm 风险。
-
-项目的期望形态是一个轻量、模型无关、可解释的 forecast correction package：它可以接在现有时间序列预测模型之后，不需要重训基础模型，同时提供 performance-oriented mode 和 conservative mode，分别服务于 clean/stress 收益最大化和外部未知预测表上的低伤害部署。
-
-## 仓库状态
-
-本仓库目前存放初步公开研究说明、阶段性结果表和方法文档。代码与复现实验脚本会在原型进一步稳定后继续整理进来。
+- HalluGuard-LRBN mean MSE delta vs raw: `-3.7952%`
+- RevIN: `-3.6921%`
+- NST: `-3.6155%`
+- LRBN 与 RevIN/NST 属于同一量级，略优但差距不大。
+- ECL 是主要失败数据集，不能声称 universal improvement。
+- simple smoothing controls 不能解释 LRBN 的主要收益。
