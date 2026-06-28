@@ -1,0 +1,234 @@
+{
+  "n_bootstrap": 2000,
+  "seed": 2026,
+  "LRBN-BP-always": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.2501768870054856,
+      "delta_ci95_low": -0.32420954285727016,
+      "delta_ci95_high": -0.1768667218643575,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.6271925555833323,
+      "delta_ci95_low": -0.8845690725805498,
+      "delta_ci95_high": -0.38583192961288876,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.012179330674471276,
+      "delta_ci95_low": -0.02013613402759682,
+      "delta_ci95_high": 0.048071126575520415,
+      "p_improve": 0.241
+    }
+  },
+  "LRBN-BP-stage3-gated": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.03002662419422079,
+      "delta_ci95_low": -0.05920113391051984,
+      "delta_ci95_high": -0.005399071462268549,
+      "p_improve": 0.9945
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.11188170872960233,
+      "delta_ci95_low": -0.24120389898698902,
+      "delta_ci95_high": -0.00941963683765707,
+      "p_improve": 0.9845
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-BP-repair-gate": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.08552394640923015,
+      "delta_ci95_low": -0.10811763265902295,
+      "delta_ci95_high": -0.06137300987241595,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.29065684814383497,
+      "delta_ci95_low": -0.3811239060828703,
+      "delta_ci95_high": -0.20291340888072407,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-BP-short-bridge": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.029606938147181128,
+      "delta_ci95_low": -0.03383219504138467,
+      "delta_ci95_high": -0.0259025826902865,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.08040438419603634,
+      "delta_ci95_low": -0.09536684775590198,
+      "delta_ci95_high": -0.06737293526643241,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": -0.0002607498610296128,
+      "delta_ci95_low": -0.0007463202162882644,
+      "delta_ci95_high": 0.0002482820534340987,
+      "p_improve": 0.8365
+    }
+  },
+  "LRBN-SRA-BP-safe": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.0810089150106816,
+      "delta_ci95_low": -0.10554629675886602,
+      "delta_ci95_high": -0.05876550666797556,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.3021347294817357,
+      "delta_ci95_low": -0.3930473511395964,
+      "delta_ci95_high": -0.22080428121599313,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-SRA-BP-balanced": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.12717508287845883,
+      "delta_ci95_low": -0.15496756859356633,
+      "delta_ci95_high": -0.0992151037532179,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.38599551758170464,
+      "delta_ci95_low": -0.48247400041049004,
+      "delta_ci95_high": -0.2900955762681092,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-SRA-BP-basic": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.17159225066340697,
+      "delta_ci95_low": -0.23659652647338508,
+      "delta_ci95_high": -0.11271126462343693,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.6271925555833323,
+      "delta_ci95_low": -0.8979515912778284,
+      "delta_ci95_high": -0.3894357003015595,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-SRA-BP-short": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.12115681107040914,
+      "delta_ci95_low": -0.14828317842192193,
+      "delta_ci95_high": -0.09500273831172644,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.38391304426117,
+      "delta_ci95_low": -0.484464253774266,
+      "delta_ci95_high": -0.2921284266217387,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-SRA-BP-support": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.12717508287845883,
+      "delta_ci95_low": -0.15563640304477125,
+      "delta_ci95_high": -0.1009326372642933,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.38599551758170464,
+      "delta_ci95_low": -0.48520136618373183,
+      "delta_ci95_high": -0.29122791444839335,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": 0.0,
+      "delta_ci95_low": 0.0,
+      "delta_ci95_high": 0.0,
+      "p_improve": 0.0
+    }
+  },
+  "LRBN-SRA-BP-continuous": {
+    "overall": {
+      "count": 768,
+      "mean_delta": -0.03500203359482792,
+      "delta_ci95_low": -0.04683633597520858,
+      "delta_ci95_high": -0.024051710118844164,
+      "p_improve": 1.0
+    },
+    "high_gap_low_repair": {
+      "count": 163,
+      "mean_delta": -0.13702451296898732,
+      "delta_ci95_low": -0.18371403701966663,
+      "delta_ci95_high": -0.09786551701129884,
+      "p_improve": 1.0
+    },
+    "low_gap_high_repair": {
+      "count": 90,
+      "mean_delta": -5.551115123125783e-17,
+      "delta_ci95_low": -1.2953527139814012e-15,
+      "delta_ci95_high": 1.2672579035526905e-15,
+      "p_improve": 0.54
+    }
+  }
+}

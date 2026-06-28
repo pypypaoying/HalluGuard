@@ -1,0 +1,5 @@
+variant,backbone,completed_rows,total_rows,mean_mse,mean_mae,mean_mse_delta_pct_vs_raw,mean_mae_delta_pct_vs_raw,blocked_rows
+raw_no_correction,PatchTST,1,1,7.270392972436927,2.097148364665424,0.0,0.0,0
+unified_revin_rdn_hybrid,PatchTST,1,1,7.242316015180876,2.094476210218337,-0.3861821137109716,-0.12741847415802623,0
+raw_no_correction,ALL,1,1,7.270392972436927,2.097148364665424,0.0,0.0,0
+unified_revin_rdn_hybrid,ALL,1,1,7.242316015180876,2.094476210218337,-0.3861821137109716,-0.12741847415802623,0

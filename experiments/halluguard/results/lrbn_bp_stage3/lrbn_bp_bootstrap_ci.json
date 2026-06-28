@@ -1,0 +1,20 @@
+{
+  "HalluGuard-LRBN-BP-gated": {
+    "mean_delta": -0.03002662419422079,
+    "ci95_low": -0.06152689269364038,
+    "ci95_high": -0.005077181252980037,
+    "p_improve_bootstrap": 0.993
+  },
+  "HalluGuard-LRBN-BP-always": {
+    "mean_delta": -0.2501768870054856,
+    "ci95_low": -0.3242095428572702,
+    "ci95_high": -0.1768667218643575,
+    "p_improve_bootstrap": 1.0
+  },
+  "HalluGuard-BP-global": {
+    "mean_delta": 1.0912155998794109,
+    "ci95_low": 0.849475758625798,
+    "ci95_high": 1.3351945157745686,
+    "p_improve_bootstrap": 0.0
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "method_family": "short",
+  "anchor_mode": "last",
+  "tail_len": 16,
+  "tau_g": 5.265299801054961,
+  "tau_r": 0.8,
+  "tau_j": null,
+  "alpha": 0.75,
+  "K": "H_div_4",
+  "continuous": false,
+  "kg": 4.0,
+  "kr": 4.0,
+  "kj": 4.0
+}

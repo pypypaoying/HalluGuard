@@ -1,0 +1,37 @@
+{
+  "HalluGuard-LRBN-BP-gated": {
+    "policy": "gated",
+    "alpha": 0.5,
+    "tau": 13.766675883152962,
+    "coverage": 0.05078125,
+    "delta_pct_vs_lrbn": -1.1650865777946104,
+    "harm_rate_vs_lrbn": 0.01171875,
+    "low_delta_pct_vs_lrbn": 0.0,
+    "q4_improvement_pct_vs_lrbn": 3.6652999634598156,
+    "feasible": true,
+    "tail": 24,
+    "decay": "linear",
+    "selection_reason": "validation_feasible_best_q4"
+  },
+  "HalluGuard-LRBN-BP-always": {
+    "policy": "always",
+    "alpha": 0.5,
+    "tau": -Infinity,
+    "coverage": 1.0,
+    "delta_pct_vs_lrbn": -4.296210484390716,
+    "harm_rate_vs_lrbn": 0.453125,
+    "tail": 24,
+    "decay": "linear",
+    "selection_reason": "validation_min_mse_always"
+  },
+  "HalluGuard-BP-global": {
+    "policy": "raw_bp_global",
+    "alpha": 0.5,
+    "tau": -Infinity,
+    "coverage": 1.0,
+    "delta_pct_vs_raw": -5.428222530066896,
+    "decay": "linear",
+    "selection_reason": "validation_min_mse_raw_bp"
+  },
+  "test_threshold_leakage": false
+}

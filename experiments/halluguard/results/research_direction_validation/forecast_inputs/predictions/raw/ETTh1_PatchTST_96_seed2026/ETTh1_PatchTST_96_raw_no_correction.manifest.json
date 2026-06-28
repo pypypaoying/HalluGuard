@@ -1,0 +1,17 @@
+{
+  "dataset": "ETTh1",
+  "backbone": "PatchTST",
+  "horizon": 96,
+  "seq_len": 96,
+  "epochs": 2,
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "max_train_windows": 256,
+  "max_eval_windows": 96,
+  "device": "cpu",
+  "n_val": 96,
+  "n_test": 96,
+  "prediction_path": "experiments\\halluguard\\results\\research_direction_validation\\forecast_inputs\\predictions\\raw\\ETTh1_PatchTST_96_seed2026\\ETTh1_PatchTST_96_raw_no_correction.jsonl",
+  "adapter_mode": "raw_backbone",
+  "test_threshold_leakage": false
+}

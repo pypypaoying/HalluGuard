@@ -1,0 +1,43 @@
+{
+  "table": "TableA",
+  "claim_method": "HalluGuard-LRBN unified_revin_rdn_hybrid",
+  "datasets": [
+    "ETTm1",
+    "ETTh1"
+  ],
+  "backbones": [
+    "DLinear",
+    "PatchTST"
+  ],
+  "horizons": [
+    96,
+    192
+  ],
+  "seeds": [
+    2026
+  ],
+  "methods": [
+    "raw_no_correction",
+    "HalluGuard-LRBN",
+    "matched_sparse_smoothing",
+    "naive_smoothing",
+    "ema_smoothing",
+    "median_smoothing"
+  ],
+  "seq_len": 96,
+  "tail_len": 48,
+  "epochs": 2,
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "san_pretrain_epochs": 5,
+  "sop_plug_epochs": 10,
+  "max_train_windows": 256,
+  "max_eval_windows": 96,
+  "val_test_contract": "validation split may calibrate policies; test split is evaluation-only",
+  "test_threshold_leakage": false,
+  "notes": [
+    "TAFAS-online is excluded from TableA by default because it uses partially observed target feedback.",
+    "SOLID-official-supported rows are recorded in the matrix; unsupported official adapter cells are explicit blocked rows.",
+    "max_train_windows/max_eval_windows <= 0 means use all available windows."
+  ]
+}

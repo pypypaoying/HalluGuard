@@ -1,0 +1,22 @@
+{
+  "dataset": "ETTh1",
+  "backbone": "DLinear",
+  "horizon": 96,
+  "variant": "unified_revin_rdn_hybrid",
+  "method": "HalluGuard-LRBN",
+  "model_label": "DLinear+HalluGuard-LRBN-unified_revin_rdn_hybrid",
+  "seq_len": 96,
+  "tail_len": 48,
+  "epochs": 2,
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "max_train_windows": 256,
+  "max_eval_windows": 96,
+  "device": "cpu",
+  "n_val": 96,
+  "n_test": 96,
+  "prediction_path": "experiments\\halluguard\\results\\research_direction_validation\\forecast_inputs\\predictions\\halluguard_lrbn\\ETTh1_DLinear_96_seed2026\\ETTh1_DLinear_96_unified_revin_rdn_hybrid.jsonl",
+  "adapter_mode": "learnable_reversible_boundary_normalization",
+  "learned_params": "{\"beta\": 0.7001611590385437, \"gamma\": 0.35045480728149414}",
+  "test_threshold_leakage": false
+}

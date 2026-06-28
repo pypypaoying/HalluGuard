@@ -1,0 +1,12 @@
+{
+  "status": "strong_pass",
+  "decision": "enter_full_table",
+  "overall_delta_pct_vs_lrbn": -0.6135197640016364,
+  "overall_delta_vs_lrbn": -0.03002662419422079,
+  "q4_delta_pct_vs_lrbn": -2.729767308058518,
+  "q4_improvement_pct_vs_lrbn": 2.729767308058518,
+  "harm_extra_pp_vs_lrbn": 0.018229166666666668,
+  "low_slice_worse_pct": 0.0,
+  "configs_improved_ratio": 0.75,
+  "test_threshold_leakage": false
+}

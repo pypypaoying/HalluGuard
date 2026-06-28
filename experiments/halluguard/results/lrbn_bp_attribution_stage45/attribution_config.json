@@ -1,0 +1,64 @@
+{
+  "metrics_csv": "experiments\\halluguard\\results\\research_direction_validation\\forecast_inputs\\combined_metrics.csv",
+  "stage3_dir": "experiments\\halluguard\\results\\lrbn_bp_stage3",
+  "stage4_dir": "experiments\\halluguard\\results\\lrbn_bp_stage4",
+  "output_dir": "experiments\\halluguard\\results\\lrbn_bp_attribution_stage45",
+  "scope": "compact_attribution",
+  "datasets": [
+    "ETTh1",
+    "ETTm1"
+  ],
+  "backbones": [
+    "DLinear",
+    "PatchTST"
+  ],
+  "horizons": [
+    96,
+    192
+  ],
+  "seeds": [
+    2026
+  ],
+  "n_val_samples": 768,
+  "n_test_samples": 768,
+  "n_test_configs": 8,
+  "thresholds_validation_only": {
+    "g_L_q25": 1.0021988321737274,
+    "g_L_q50": 2.4260872328869336,
+    "g_L_q75": 4.48421667243929,
+    "g_y_q25": 0.25887543320188605,
+    "g_y_q50": 0.598360408805005,
+    "g_y_q75": 1.2460740257558398,
+    "norm_ratio_q25": 0.15039786492623342,
+    "norm_ratio_q50": 0.3390091815508431,
+    "norm_ratio_q75": 0.6072416279026658,
+    "anchor_disagreement_q25": 0.08773928738911771,
+    "anchor_disagreement_q50": 0.23186002536103095,
+    "anchor_disagreement_q75": 0.4181980252928351,
+    "raw_gap_q25": 1.1927746903960852,
+    "raw_gap_q50": 2.701379252166711,
+    "raw_gap_q75": 4.863727138694607,
+    "repair_low": 0.3,
+    "repair_high": 0.7
+  },
+  "stage3_params": {
+    "alpha": 0.5,
+    "tau": 13.766675883152962,
+    "tail": 24,
+    "decay": "linear"
+  },
+  "repair_gate_params": {
+    "method": "LRBN-BP-repair-gate",
+    "alpha": 0.2,
+    "anchor_mode": "last",
+    "bridge_mode": "linear",
+    "high_repair": 0.3
+  },
+  "bp_always_params": {
+    "alpha": 0.5,
+    "anchor_mode": "last",
+    "bridge_mode": "linear"
+  },
+  "parquet_status": "experiments\\halluguard\\results\\lrbn_bp_attribution_stage45\\attribution_sample_table.parquet",
+  "test_threshold_leakage": false
+}

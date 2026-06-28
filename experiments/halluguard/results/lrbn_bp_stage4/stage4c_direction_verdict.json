@@ -1,0 +1,19 @@
+{
+  "status": "perf_only",
+  "decision": "keep_lrbn_main_report_bp_perf_ablation",
+  "safe_delta_pct_vs_lrbn": -0.20296371829813556,
+  "safe_delta_mse_vs_lrbn": -0.009933364256515493,
+  "safe_harm_rate_vs_lrbn": 0.09244791666666667,
+  "safe_q4_improvement_pct_vs_lrbn": 0.6072844989383837,
+  "safe_low_delta_pct_vs_lrbn": -0.000199250876966675,
+  "safe_config_improved_ratio": 1.0,
+  "safe_ci95_low": -0.011730080240710414,
+  "safe_ci95_high": -0.008315421752094453,
+  "harm_reduction_vs_bp_always": 0.7815384615384615,
+  "bp_always_delta_pct_vs_lrbn": -5.111745618870136,
+  "bp_always_harm_rate_vs_lrbn": 0.4231770833333333,
+  "stage3_gated_delta_pct_vs_lrbn": -0.6135197640016364,
+  "stage3_gated_harm_rate_vs_lrbn": 0.018229166666666668,
+  "performance_variant_pass": true,
+  "test_threshold_leakage": false
+}
