@@ -9,6 +9,16 @@ The retained method family is **Sparse Repair-Aware Boundary Projection (SRA-BP)
 
 Earlier exploratory lines are intentionally not included as main methods here. They are useful research history, but the current clean SRA-BP line is the compact, auditable boundary-repair method.
 
+## Visual Overview
+
+![Overall Architecture of HalluGuard](docs/assets/halluguard_overall_architecture.png)
+
+The architecture view shows HalluGuard as a black-box, test-time layer placed after a frozen forecasting backbone. The core contract is deliberately conservative: HalluGuard reads the historical context and raw forecast, extracts local dynamics evidence, then chooses among identity, LRBN-style boundary repair, selective smoothing, and optional sparse boundary projection. All thresholds and routing policies are calibrated on validation data; test windows are only evaluated.
+
+![Core Mechanism of HalluGuard](docs/assets/halluguard_core_mechanism.png)
+
+The mechanism view highlights why the retained SRA-BP line focuses on boundary repair. The method looks for forecast-start discontinuities and unsupported oscillations, routes only when validation evidence supports a correction, and abstains on stable forecasts. In the current release, the main deployable variants are `Safe-SRA` and `Balanced-SRA`: `Safe-SRA` prioritizes harm control, while `Balanced-SRA` exposes more sparse repair coverage for stronger compact MSE gains.
+
 ## Method Summary
 
 SRA-BP is an inference-time / post-processing method. It does not retrain the forecasting backbone and does not use hidden states.
